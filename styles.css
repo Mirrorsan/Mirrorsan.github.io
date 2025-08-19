@@ -36,3 +36,15 @@ footer { text-align:center; color:#888; padding:20px 0; }
 @media (max-width: 480px) {
   .btn { width: 100%; justify-content:center; }
 }
+
+.example-line {
+  display: inline-flex;          /* keep it on one line next to each other */
+  align-items: baseline;         /* align text nicely */
+  gap: 8px;
+  flex-wrap: nowrap;             /* prevent wrapping */
+  margin: 0 0 -10px;
+}
+
+.example-line label {
+  font-weight: 600;              /* style as you like */
+}
