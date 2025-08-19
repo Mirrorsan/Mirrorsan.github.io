@@ -100,6 +100,7 @@
       };
 
       const token = await getRecaptchaToken();
+      console.log('[recaptcha] token len =', token && token.length);   // <— add this
       payload.recaptchaToken = token;
 
       const res = await fetch(`${cfg.API_ENDPOINT}`, {
