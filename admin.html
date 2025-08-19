@@ -1,0 +1,60 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Monthly Report Admin</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <script defer src="./config.js"></script>
+  <script defer src="./admin.js"></script>
+  <!-- Google Identity Services (Sign-In) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Admin Panel</h1>
+      <div id="signin"></div>
+      <div id="admin-ui" style="display:none;">
+        <div class="row">
+          <div>
+            <label>Month</label>
+            <input type="month" id="monthPicker" />
+          </div>
+          <div style="align-self:end;">
+            <button class="btn" id="btn-refresh">Refresh</button>
+          </div>
+        </div>
+
+        <h2>Dashboard</h2>
+        <div id="dash"></div>
+
+        <h2>Export</h2>
+        <button class="btn" id="btn-export">Export Excel (.xlsx)</button>
+        <div id="exportMsg" class="small"></div>
+
+        <h2>Rollover</h2>
+        <div class="row">
+          <div><label>From</label><input type="month" id="fromMonth"/></div>
+          <div><label>To</label><input type="month" id="toMonth"/></div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Mode</label>
+            <select id="rollMode">
+              <option value="copy">Copy</option>
+              <option value="move">Move</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin:10px 0;">
+          <button class="btn secondary" id="btn-dryrun">Dry-run</button>
+          <button class="btn" id="btn-roll">Confirm Rollover</button>
+        </div>
+        <div id="rollMsg" class="small"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

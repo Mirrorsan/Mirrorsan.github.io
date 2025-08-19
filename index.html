@@ -1,0 +1,75 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Monthly Report Summary</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <script defer src="./config.js"></script>
+  <script defer src="./main.js"></script>
+  <!-- reCAPTCHA v3 -->
+  <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Monthly Report Summary</h1>
+      <p class="small">All fields in English. Your email is not collected here.</p>
+
+      <form id="report-form">
+        <div class="row">
+          <div>
+            <label>First name</label>
+            <input type="text" name="firstName" required/>
+          </div>
+          <div>
+            <label>Last name</label>
+            <input type="text" name="lastName" required/>
+          </div>
+        </div>
+
+        <label>Project Name(s)</label>
+        <div id="projects" class="list"></div>
+        <button type="button" id="add-project" class="btn secondary add-line">+ Add Project</button>
+
+        <h2>Executive Summary</h2>
+        <label id="lbl-key"></label>
+        <textarea name="keyHighlights" required></textarea>
+
+        <label id="lbl-upcoming"></label>
+        <textarea name="upcomingFocus" required></textarea>
+
+        <label id="lbl-psh"></label>
+        <textarea name="projectSpecificHighlights"></textarea>
+
+        <label id="lbl-cta"></label>
+        <textarea name="callToAction"></textarea>
+
+        <h2>Risks, Issues, Concerns & Mitigations</h2>
+
+        <label id="lbl-concerns"></label>
+        <div id="concerns" class="list"></div>
+        <button type="button" data-target="concerns" class="btn secondary add-line">+ Add Concern</button>
+
+        <label id="lbl-risks"></label>
+        <div id="risks" class="list"></div>
+        <button type="button" data-target="risks" class="btn secondary add-line">+ Add Risk</button>
+
+        <label id="lbl-issues"></label>
+        <div id="issues" class="list"></div>
+        <button type="button" data-target="issues" class="btn secondary add-line">+ Add Issue</button>
+
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" type="submit">Submit</button>
+          <button class="btn ghost" type="reset">Reset</button>
+        </div>
+
+        <input type="hidden" id="recaptchaToken" name="recaptchaToken" />
+      </form>
+      <div id="msg" class="small" style="margin-top:12px;"></div>
+    </div>
+    <footer>© Monthly Report Summary</footer>
+  </div>
+</body>
+</html>
