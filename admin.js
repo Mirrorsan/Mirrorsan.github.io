@@ -29,7 +29,7 @@
   async function api(op, body={}) {
     const res = await fetch(cfg.API_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      // headers: { 'Content-Type':'application/json' },
       body: JSON.stringify({ op, idToken, ...body })
     });
     const json = await res.json();
