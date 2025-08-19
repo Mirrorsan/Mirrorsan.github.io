@@ -50,18 +50,28 @@
   window.addEventListener('load', addDefaultLines);
 
   async function getRecaptchaToken() {
-    if (!window.grecaptcha || !cfg.RECAPTCHA_SITE_KEY) return '';
-    return new Promise(resolve => {
-      grecaptcha.ready(async () => {
-        try {
-          const token = await grecaptcha.execute(cfg.RECAPTCHA_SITE_KEY, {action: 'submit'});
-          resolve(token);
-        } catch (e) {
-          resolve('');
-        }
-      });
-    });
-  }
+  const key = cfg.RECAPTCHA_SITE_KEY;
+  if (!key) return '';
+  let tries = 0;
+  return new Promise(resolve => {
+    const wait = () => {
+      tries++;
+      if (window.grecaptcha && grecaptcha.execute) {
+        grecaptcha.ready(() => {
+          grecaptcha.execute(key, { action: 'submit' })
+            .then(t => resolve(t))
+            .catch(() => resolve(''));
+        });
+      } else if (tries < 30) {
+        setTimeout(wait, 100); // retry up to ~3s
+      } else {
+        resolve('');
+      }
+    };
+    wait();
+  });
+}
+
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
