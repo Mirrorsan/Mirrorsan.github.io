@@ -24,6 +24,16 @@ window.APP_CONFIG = {
       concerns: 'Concerns',
       risks: 'Risks',
       issues: 'Issues'
+    },
+    supportNeeded: {
+      legend: "Support needed to achieve next month's goals",
+      options: {
+        additionalResources: 'Additional Resources',
+        training: 'Training',
+        managerialSupport: 'Managerial Support',
+        collaboration: 'Inter-departmental Collaboration',
+        other: 'Other (Please specify in comments)'
+      }
     }
   }
 };

@@ -16,6 +16,13 @@
   document.getElementById('lbl-concerns').textContent = cfg.QUESTIONS.concerns.concerns;
   document.getElementById('lbl-risks').textContent = cfg.QUESTIONS.concerns.risks;
   document.getElementById('lbl-issues').textContent = cfg.QUESTIONS.concerns.issues;
+  document.getElementById('lbl-support-legend').textContent = cfg.QUESTIONS.supportNeeded.legend;
+  document.getElementById('lbl-support-additional').textContent = cfg.QUESTIONS.supportNeeded.options.additionalResources;
+  document.getElementById('lbl-support-training').textContent = cfg.QUESTIONS.supportNeeded.options.training;
+  document.getElementById('lbl-support-managerial').textContent = cfg.QUESTIONS.supportNeeded.options.managerialSupport;
+  document.getElementById('lbl-support-collab').textContent = cfg.QUESTIONS.supportNeeded.options.collaboration;
+  document.getElementById('lbl-support-other').textContent = cfg.QUESTIONS.supportNeeded.options.other;
+
 
   // Helpers
   function makeItemRow(placeholder='Type here...') {
@@ -85,6 +92,13 @@
       const concerns = [...document.querySelectorAll('#concerns input')].map(i => i.value.trim()).filter(Boolean);
       const risks    = [...document.querySelectorAll('#risks input')].map(i => i.value.trim()).filter(Boolean);
       const issues   = [...document.querySelectorAll('#issues input')].map(i => i.value.trim()).filter(Boolean);
+      const support = {
+        additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
+        training:            form.querySelector('input[name="support_training"]').checked,
+        managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
+        collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
+        other:               form.querySelector('input[name="support_other"]').checked
+      };
 
       const payload = {
         firstName: (data.get('firstName') || '').trim(),
@@ -97,6 +111,7 @@
           callToAction: (data.get('callToAction') || '').trim()
         },
         concerns: { concerns, risks, issues },
+        support
       };
 
       const token = await getRecaptchaToken();
