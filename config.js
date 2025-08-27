@@ -4,7 +4,7 @@
  * Replace placeholders before deploying.
  */
 window.APP_CONFIG = {
-  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwoSlBRLcVBzYcXiz85zZirgBytLpaq9qe9UP5BQXbvReH-6O4QniwSuwNSd2xGF6Nz6A/exec',
+  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbxI6YG5LQar-xMm_vuWVDT_5PVJCk2CD_0c70l82VA1XI8LeMjbHNfE7sOVyOUa5cg2rQ/exec',
   RECAPTCHA_SITE_KEY: '6LervKorAAAAAGfASzwwujTy77Wa19sNrYepTkdK',
   OAUTH_CLIENT_ID: '696796297498-6nm6iqn4nae01nvsk2eke5e7p9lb53se.apps.googleusercontent.com',
   TIMEZONE: 'Asia/Bangkok',
