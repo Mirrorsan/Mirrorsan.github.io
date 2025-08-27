@@ -1,0 +1,41 @@
+:root{
+  --bg:#f7f9fc;--card:#fff;--muted:#667085;--text:#0f172a;
+  --accent:#2563eb;--success:#16a34a;--danger:#dc2626;--warn:#f59e0b;--border:#e5e7eb;
+  --badge-open:#ecfdf5;--badge-closed:#fef2f2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'TH Sarabun New',sans-serif}
+.container{max-width:1150px;margin:24px auto;padding:0 16px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+h1{margin:0;font-size:24px;letter-spacing:.2px}h2{margin:0;font-size:18px}h3{margin:6px 0;font-size:14px}
+.muted{color:var(--muted)}.small{font-size:12px;color:var(--muted)}.mt{margin-top:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 10px 30px rgba(2,6,23,.06)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.badge{padding:6px 10px;border-radius:999px;font-weight:600;border:1px solid var(--border)}
+.badge.open{background:var(--badge-open);color:var(--success)}.badge.closed{background:var(--badge-closed);color:#b91c1c}
+.row{display:flex;gap:8px;align-items:center}.grid{display:grid;gap:16px}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1.2fr 1.2fr 1fr}
+@media (max-width:1000px){.grid-2,.grid-3{grid-template-columns:1fr}}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.lbl{font-size:13px;color:var(--text);font-weight:600;margin-bottom:6px}
+input[type="month"],input[type="date"],select{width:100%;padding:10px 12px;background:#fff;border:1px solid var(--border);color:var(--text);border-radius:10px;transition:box-shadow .15s ease,border-color .15s ease}
+input[type="month"]:focus,input[type="date"]:focus,select:focus{outline:none;border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+button.btn{cursor:pointer;padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:999px;font-weight:700;transition:transform .05s ease,box-shadow .15s ease,background .15s ease;box-shadow:0 2px 10px rgba(37,99,235,.15)}
+button.btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,99,235,.22)}
+button.btn:active{transform:translateY(0)}
+button.btn.secondary{background:#eef2ff;color:#1e293b;box-shadow:none;border:1px solid var(--border)}
+button.btn.secondary:hover{background:#e0e7ff}
+ul.list{margin:6px 0 0;padding-left:18px}.footer{display:flex;justify-content:flex-end;margin-top:12px}
+#dashMonth table,#dashRange table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+#dashMonth th,#dashMonth td,#dashRange th,#dashRange td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
+#dashMonth th,#dashRange th{color:#475467;background:#f8fafc;font-weight:600}
+.kpi{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 10px}.pill{background:#f8fafc;border:1px solid var(--border);padding:8px 12px;border-radius:14px}
+.toggle-row{display:flex;align-items:center;gap:10px}.switch{position:relative;display:inline-block;width:56px;height:30px}.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#d1d5db;transition:.2s;border-radius:999px}
+.slider:before{position:absolute;content:"";height:24px;width:24px;left:3px;bottom:3px;background:#fff;transition:.2s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input:checked + .slider{background:#86efac}input:checked + .slider:before{transform:translateX(26px)}
+.flatpickr-input[readonly]{width:100%;padding:10px 12px;background:#fff;border:1px solid var(--border);color:var(--text);border-radius:10px;cursor:text}
+.flatpickr-calendar{background:#fff;border:1px solid var(--border);color:var(--text);box-shadow:0 8px 24px rgba(15,23,42,.1)}
+.flatpickr-months,.flatpickr-weekdays{background:#fff;color:var(--text)}
+.flatpickr-day{color:var(--text);border-radius:8px}
+.flatpickr-day.today{border-color:var(--accent)}
+.flatpickr-day.selected{background:var(--accent);color:#fff}
+.flatpickr-day:hover{background:#eef2ff}
