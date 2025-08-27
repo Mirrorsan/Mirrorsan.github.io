@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -19,119 +18,178 @@
       <form id="report-form">
         <div class="row">
           <div>
-            <label>First name</label>
-            <input type="text" name="firstName" required/>
+            <label for="firstName">First name</label>
+            <input id="firstName" type="text" name="firstName" required/>
           </div>
           <div>
-            <label>Last name</label>
-            <input type="text" name="lastName" required/>
+            <label for="lastName">Last name</label>
+            <input id="lastName" type="text" name="lastName" required/>
           </div>
         </div>
 
-        <label>Project Name(s)</label>
-        <div id="projects" class="list"></div>
+        <br><hr><br>
+
+        <label for="projects">Project Name(s)</label>
+        <div id="projects" class="list" aria-describedby="projects-help"></div>
+        <div id="projects-help" class="small">Add at least one project.</div>
         <button type="button" id="add-project" class="btn secondary add-line">+ Add Project</button>
 
+        <br><hr><br>
+
         <h2>Executive Summary</h2>
-        
-        <div>
-          <h3 class="example-line">
-            <span>Example:</span>
-            <label id="lbl-key" for="keyHighlights"></label>
-          </h3>
-          <ul>
-            <li>Achieved [X] resource deployments/onboardings.</li>
-            <li>Successfully completed [Y] critical tasks for project [A].</li>
-            <li>Resolved [Z] significant issues.</li>
-          </ul>
-          
-          <textarea name="keyHighlights" required></textarea>
-        </div>
-        <br>
 
-        <div>
-          <h3 class="example-line">
-            <span>Example:</span>
-            <label id="lbl-upcoming" for="upcomingFocus"></label>
-          </h3>
-          <ul>
-            <li>Recruitment for [X] specific roles.</li>
-            <li>Monitoring spending against forecast for [Project A] due to [reason].</li>
-            <li>Mitigation of [Key Risk/Concern].</li>
-          </ul>
-          <label id="lbl-upcoming"></label>
-          <textarea name="upcomingFocus" required></textarea>
+        <!-- Key Highlights -->
+        <div class="field">
+          <h3 class="field-title" id="lbl-key" for="keyHighlights">Key Highlights (Reporting Period)</h3>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li>Achieved <code>[X]</code> resource deployments/onboardings.</li>
+              <li>Successfully completed <code>[Y]</code> critical tasks for project <code>[A]</code>.</li>
+              <li>Resolved <code>[Z]</code> significant issues.</li>
+            </ul>
+          </div>
+          <textarea id="keyHighlights" name="keyHighlights" rows="5" 
+            placeholder="Key Highlights (Reporting Period)"></textarea>
         </div>
-        <br>
 
-        <div>
-          <h3 class="example-line">
-            <span>Example:</span>
-            <label id="lbl-psh" for="projectSpecificHighlights"></label>
-          </h3>
-          <ul>
-            <li>Recruitment for [X] specific roles.</li>
-            <li>Monitoring spending against forecast for [Project A] due to [reason].</li>
-            <li>Mitigation of [Key Risk/Concern].</li>
-          </ul>
-          <label id="lbl-psh"></label>
-          <textarea name="projectSpecificHighlights"></textarea>
+        <!-- Upcoming Focus -->
+        <div class="field">
+          <h3 class="field-title" id="lbl-upcoming" for="upcomingFocus">Upcoming Focus (Next Period)</h3>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li>Recruitment for <code>[X]</code> specific roles.</li>
+              <li>Monitoring spending against forecast for <code>[Project A]</code> due to <code>[reason]</code>.</li>
+              <li>Mitigation of <code>[Key Risk/Concern]</code>.</li>
+            </ul>
+          </div>
+          <textarea id="upcomingFocus" name="upcomingFocus" rows="5" 
+            placeholder="Upcoming Focus"></textarea>
         </div>
-        <br>
 
-        <div>
-          <h3 class="example-line">
-            <span>Example:</span>
-            <label id="lbl-cta" for="callToAction"></label>
-          </h3>
-          <ul>
-            <li>[Briefly state any immediate decisions or support needed from stakeholders].</li>
-          </ul>
-          <label id="lbl-cta"></label>
-          <textarea name="callToAction"></textarea>
+        <!-- Project-Specific Highlights -->
+        <div class="field">
+          <h3 class="field-title" id="lbl-psh" for="projectSpecificHighlights">Project-Specific Highlights</h3>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li><strong>Project A:</strong> Completed integration tests for modules <code>[M1, M2]</code>.</li>
+              <li><strong>Project B:</strong> Improved performance by <code>[P%]</code> after refactor.</li>
+              <li><strong>Project C:</strong> Cleared <code>[K]</code> blockers with stakeholders.</li>
+            </ul>
+          </div>
+          <textarea id="projectSpecificHighlights" name="projectSpecificHighlights" rows="5"
+            placeholder="ไฮไลต์รายโปรเจ็กต์ เช่น งานที่จบ ตัวเลขผลลัพธ์ ปัญหาที่ปลดล็อก"></textarea>
         </div>
-        <br>
+
+        <!-- Call to Action -->
+        <div class="field">
+          <h3 class="field-title" id="lbl-cta" for="callToAction">Call to Action</h3>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li>Need approval for <code>[Budget/Tool]</code> by <code>[Date]</code>.</li>
+              <li>Request cross-team support from <code>[Team/Person]</code> for <code>[Task]</code>.</li>
+              <li>Decision required on <code>[Option 1 vs Option 2]</code> to unblock <code>[Workstream]</code>.</li>
+            </ul>
+          </div>
+          <textarea id="callToAction" name="callToAction" rows="4"></textarea>
+        </div>
+
+        <br><hr><br>
 
         <h2>Risks, Issues, Concerns & Mitigations</h2>
 
-        <label id="lbl-concerns"></label>
-        <div id="concerns" class="list"></div>
-        <button type="button" data-target="concerns" class="btn secondary add-line">+ Add Concern</button>
+        <!-- Concerns -->
+        <div class="field">
+          <label class="field-title" id="lbl-concerns" for="concerns">Concerns</label>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li><strong>Concern 1:</strong> Risk of resource attrition on Project X.
+                <ul class="example-sublist">
+                  <li><strong>Impact:</strong> Potential delay, increased costs.</li>
+                  <li><strong>Mitigation:</strong> Engage vendor B, cross-train, identify backups.</li>
+                </ul>
+              </li>
+              <li><strong>Concern 2:</strong> Potential overspend on Project Y due to scope change.
+                <ul class="example-sublist">
+                  <li><strong>Impact:</strong> Budget overrun.</li>
+                  <li><strong>Mitigation:</strong> Formal change request, re-prioritize features.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div id="concerns" class="list" aria-labelledby="lbl-concerns"></div>
+          <button type="button" data-target="concerns" class="btn secondary add-line">+ Add Concern</button>
+        </div>
 
-        <label id="lbl-risks"></label>
-        <div id="risks" class="list"></div>
-        <button type="button" data-target="risks" class="btn secondary add-line">+ Add Risk</button>
+        <!-- Risks -->
+        <div class="field">
+          <label class="field-title" id="lbl-risks" for="risks">Risks</label>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li><strong>Risk 1:</strong> Description of a potential future event
+                <ul class="example-sublist">
+                  <li><strong>Likelihood:</strong> High/Medium/Low, <strong>Impact:</strong> High/Medium/Low</li>
+                  <li><strong>Mitigation Strategy:</strong> Actions to reduce likelihood/impact</li>
+                  <li><strong>Owner:</strong> [Name], <strong>Status:</strong> Open/On-going</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div id="risks" class="list" aria-labelledby="lbl-risks"></div>
+          <button type="button" data-target="risks" class="btn secondary add-line">+ Add Risk</button>
+        </div>
 
-        <label id="lbl-issues"></label>
-        <div id="issues" class="list"></div>
-        <button type="button" data-target="issues" class="btn secondary add-line">+ Add Issue</button>
-        <br><br>
+        <!-- Issues -->
+        <div class="field">
+          <label class="field-title" id="lbl-issues" for="issues">Issues</label>
+          <div class="example-box">
+            <div class="example-title">Example:</div>
+            <ul class="example-list">
+              <li><strong>Issue 1:</strong> Description of a current problem
+                <ul class="example-sublist">
+                  <li><strong>Severity:</strong> High/Medium/Low</li>
+                  <li><strong>Resolution Plan:</strong> Steps being taken</li>
+                  <li><strong>Owner:</strong> [Name], <strong>Status:</strong> Open/Resolved</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div id="issues" class="list" aria-labelledby="lbl-issues"></div>
+          <button type="button" data-target="issues" class="btn secondary add-line">+ Add Issue</button>
+        </div>
+
+        <br><hr><br>
+
 
         <h2>Support needed to achieve next month's goals</h2>
         <fieldset class="group">
-          <legend id="lbl-support-legend"></legend>
+          <legend id="lbl-support-legend">Support Needed</legend>
           <label class="cb">
             <input type="checkbox" name="support_additionalResources">
-            <span id="lbl-support-additional"></span>
+            <span id="lbl-support-additional">Additional resources</span>
           </label>
           <label class="cb">
             <input type="checkbox" name="support_training">
-            <span id="lbl-support-training"></span>
+            <span id="lbl-support-training">Training</span>
           </label>
           <label class="cb">
             <input type="checkbox" name="support_managerialSupport">
-            <span id="lbl-support-managerial"></span>
+            <span id="lbl-support-managerial">Managerial support</span>
           </label>
           <label class="cb">
             <input type="checkbox" name="support_collaboration">
-            <span id="lbl-support-collab"></span>
+            <span id="lbl-support-collab">Cross-team collaboration</span>
           </label>
           <label class="cb">
             <input type="checkbox" name="support_other">
-            <span id="lbl-support-other"></span>
+            <span id="lbl-support-other">Other</span>
           </label>
         </fieldset>
-
 
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" type="submit">Submit</button>
@@ -140,7 +198,7 @@
 
         <input type="hidden" id="recaptchaToken" name="recaptchaToken" />
       </form>
-      <div id="msg" class="small" style="margin-top:12px;"></div>
+      <div id="msg" class="small" style="margin-top:12px;" aria-live="polite"></div>
     </div>
     <footer>© Monthly Report Summary</footer>
   </div>

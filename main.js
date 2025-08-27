@@ -81,59 +81,67 @@
 
 
   form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    msg.textContent = 'Submitting...';
+  e.preventDefault();
 
-    try {
-      const data = new FormData(form);
-      const projects = [...projectsList.querySelectorAll('input[type=text]')]
-        .map(i => i.value.trim()).filter(Boolean);
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;                  // 🔒 lock
+  submitBtn.textContent = 'Submitting...';    // optional UX feedback
+  msg.textContent = 'Submitting...';
 
-      const concerns = [...document.querySelectorAll('#concerns input')].map(i => i.value.trim()).filter(Boolean);
-      const risks    = [...document.querySelectorAll('#risks input')].map(i => i.value.trim()).filter(Boolean);
-      const issues   = [...document.querySelectorAll('#issues input')].map(i => i.value.trim()).filter(Boolean);
-      const support = {
-        additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
-        training:            form.querySelector('input[name="support_training"]').checked,
-        managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
-        collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
-        other:               form.querySelector('input[name="support_other"]').checked
-      };
+  try {
+    const data = new FormData(form);
+    const projects = [...projectsList.querySelectorAll('input[type=text]')]
+      .map(i => i.value.trim()).filter(Boolean);
 
-      const payload = {
-        firstName: (data.get('firstName') || '').trim(),
-        lastName: (data.get('lastName') || '').trim(),
-        projects,
-        executiveSummary: {
-          keyHighlights: (data.get('keyHighlights') || '').trim(),
-          upcomingFocus: (data.get('upcomingFocus') || '').trim(),
-          projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
-          callToAction: (data.get('callToAction') || '').trim()
-        },
-        concerns: { concerns, risks, issues },
-        support
-      };
+    const concerns = [...document.querySelectorAll('#concerns input')].map(i => i.value.trim()).filter(Boolean);
+    const risks    = [...document.querySelectorAll('#risks input')].map(i => i.value.trim()).filter(Boolean);
+    const issues   = [...document.querySelectorAll('#issues input')].map(i => i.value.trim()).filter(Boolean);
+    const support = {
+      additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
+      training:            form.querySelector('input[name="support_training"]').checked,
+      managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
+      collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
+      other:               form.querySelector('input[name="support_other"]').checked
+    };
 
-      const token = await getRecaptchaToken();
-      console.log('[recaptcha] token len =', token && token.length);   // <— add this
-      payload.recaptchaToken = token;
+    const payload = {
+      firstName: (data.get('firstName') || '').trim(),
+      lastName: (data.get('lastName') || '').trim(),
+      projects,
+      executiveSummary: {
+        keyHighlights: (data.get('keyHighlights') || '').trim(),
+        upcomingFocus: (data.get('upcomingFocus') || '').trim(),
+        projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
+        callToAction: (data.get('callToAction') || '').trim()
+      },
+      concerns: { concerns, risks, issues },
+      support
+    };
 
-      const res = await fetch(`${cfg.API_ENDPOINT}`, {
-        method: 'POST',
-        // headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ op: 'submit', payload })
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || 'Submit failed');
+    const token = await getRecaptchaToken();
+    console.log('[recaptcha] token len =', token && token.length);
+    payload.recaptchaToken = token;
 
-      msg.textContent = '✅ Submitted! Thank you.';
-      form.reset();
-      projectsList.innerHTML = '';
-      ['concerns','risks','issues'].forEach(id => document.getElementById(id).innerHTML = '');
-      addDefaultLines();
-    } catch (err) {
-      console.error(err);
-      msg.textContent = `❌ ${err.message}`;
-    }
-  });
+    const res = await fetch(`${cfg.API_ENDPOINT}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },   // 👈 add this back
+      body: JSON.stringify({ op: 'submit', payload })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || 'Submit failed');
+
+    msg.textContent = '✅ Submitted! Thank you.';
+    form.reset();
+    projectsList.innerHTML = '';
+    ['concerns','risks','issues'].forEach(id => document.getElementById(id).innerHTML = '');
+    addDefaultLines();
+  } catch (err) {
+    console.error(err);
+    msg.textContent = `❌ ${err.message}`;
+  } finally {
+    submitBtn.disabled = false;               // 🔓 unlock
+    submitBtn.textContent = 'Submit';         // restore label
+  }
+});
+
 })();
