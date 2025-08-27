@@ -15,10 +15,10 @@
 
   // --- API helper ---
   async function api(op, payload = {}) {
-    if (!window.CONFIG || !CONFIG.API_URL) throw new Error('API_URL ยังไม่ถูกตั้งค่า');
+    if (!window.APP_CONFIG) throw new Error('API_ENDPOINT ยังไม่ถูกตั้งค่า');
     const body = { op, payload };
     if (idToken) body.idToken = idToken;
-    const res = await fetch(CONFIG.API_URL, {
+    const res = await fetch(CONFIG.API_ENDPOINT, {
       method: 'POST', headers: { 'Content-Type':'application/json' },
       body: JSON.stringify(body)
     });
@@ -153,7 +153,7 @@
 
   // --- Boot ---
   window.addEventListener('load', () => {
-    if (!window.CONFIG){ note('ยังไม่มี config.js', true); return; }
+    if (!window.APP_CONFIG){ note('ยังไม่มี config.js', true); return; }
     if (CONFIG.DISABLE_SIGNIN){ // เผื่อเปิด dev โหมด (ไม่ใช้จริงในการโปรดักชัน)
       $('#admin-ui').style.display = 'block';
       refreshAll().catch(e=>note(e.message,true));
