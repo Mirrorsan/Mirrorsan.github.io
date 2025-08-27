@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Monthly Report Admin</title>
 
-  <!-- App styles (Light theme) -->
+  <!-- Light theme -->
   <link rel="stylesheet" href="./style2.css"/>
 
   <!-- Flatpickr (Calendar UI) -->
@@ -164,17 +164,17 @@
     </section>
   </div>
 
-  <!-- config -->
-  <script src="./config.js" defer></script>
+  <!-- 1) โหลด config ก่อน (ห้าม defer) -->
+  <script src="./config.js"></script>
 
-  <!-- Flatpickr libs -->
+  <!-- 2) Flatpickr -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
 
-  <!-- Main app -->
+  <!-- 3) Main app -->
   <script src="./admin.js"></script>
 
-  <!-- Google Identity Services -->
+  <!-- 4) Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
