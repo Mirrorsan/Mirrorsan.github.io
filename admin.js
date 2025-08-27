@@ -6,23 +6,32 @@
   let idToken = null;
   const fp = {}; // flatpickr instances
 
-  // --- mini notifier (ใช้แสดงสถานะมุมขวา) ---
+  // notifier
   function note(msg, isErr=false){
     const el = $('#signin'); if(!el) return;
     el.textContent = msg;
     el.style.color = isErr ? '#dc2626' : '#667085';
   }
 
-  // --- API helper ---
+  // --- API helper (CORS-safe) ---
   async function api(op, payload = {}) {
-    if (!window.APP_CONFIG) throw new Error('API_ENDPOINT ยังไม่ถูกตั้งค่า');
+    if (!window.CONFIG || !CONFIG.API_URL) throw new Error('API_URL ยังไม่ถูกตั้งค่า');
+
     const body = { op, payload };
     if (idToken) body.idToken = idToken;
-    const res = await fetch(CONFIG.API_ENDPOINT, {
-      method: 'POST', headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify(body)
+
+    const res = await fetch(CONFIG.API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      mode: 'cors',
+      redirect: 'follow'
     });
-    const json = await res.json().catch(()=>({ok:false,error:'Invalid JSON'}));
+
+    let json;
+    try { json = await res.json(); }
+    catch (e) { throw new Error(`Unexpected response (${res.status})`); }
+
     if (!json.ok) throw new Error(json.error || 'API error');
     return json.data;
   }
@@ -40,7 +49,7 @@
     };
     ids.forEach(id=>{
       const el = $('#'+id); if(!el) return;
-      if(fp[id]?.destroy) fp[id].destroy();
+      if (fp[id]?.destroy) fp[id].destroy();
       fp[id] = flatpickr(el, opts);
     });
   }
@@ -122,39 +131,52 @@
     await loadDashboardMonth();
   }
 
-  // --- GIS boot (ต้อง sign in ก่อนโชว์ UI) ---
-  function initGIS(){
-    if (!window.google?.accounts?.id){
-      // ถ้าสคริปต์ GIS ยังไม่มา ลองรอหน่อย
-      let n=0; const t=setInterval(()=>{
-        if (window.google?.accounts?.id){ clearInterval(t); initGIS(); }
-        else if(++n>40){ note('โหลด Google Sign-In ไม่สำเร็จ', true); }
-      },100);
-      return;
+  // --- wait config ---
+  async function waitForConfig(timeoutMs = 4000, step = 50) {
+    if (window.CONFIG) return true;
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      await new Promise(r => setTimeout(r, step));
+      if (window.CONFIG) return true;
     }
-    google.accounts.id.initialize({
-      client_id: CONFIG.OAUTH_CLIENT_ID,
-      callback: async (resp) => {
-        try{
-          idToken = resp.credential;
-          $('#admin-ui').style.display = 'block';
-          note('กำลังโหลดข้อมูล…');
-          await refreshAll();
-          note('ลงชื่อเข้าใช้แล้ว');
-        }catch(e){ note(e.message, true); }
-      },
-      auto_select: false
-    });
-    // ปุ่มกด Sign in
-    google.accounts.id.renderButton($('#signin'), { theme:'outline', size:'large', shape:'pill', width: 260 });
-    // one-tap (เปิดถ้าต้องการ)
-    // google.accounts.id.prompt();
+    return false;
+  }
+
+  // --- GIS boot (ต้อง sign in ก่อนโชว์ UI; ถ้าโหลดไม่สำเร็จจะ fallback) ---
+  function initGIS(){
+    let tries = 0;
+    const timer = setInterval(() => {
+      if (window.google?.accounts?.id) {
+        clearInterval(timer);
+        google.accounts.id.initialize({
+          client_id: CONFIG.OAUTH_CLIENT_ID,
+          callback: async (resp) => {
+            try{
+              idToken = resp.credential;
+              $('#admin-ui').style.display = 'block';
+              note('กำลังโหลดข้อมูล…');
+              await refreshAll();
+              note('ลงชื่อเข้าใช้แล้ว');
+            }catch(e){ note(e.message, true); }
+          }
+        });
+        google.accounts.id.renderButton($('#signin'), { theme:'outline', size:'large', shape:'pill', width: 260 });
+      } else if (++tries > 50) { // ~5s
+        clearInterval(timer);
+        // fallback: แสดง UI ให้ใช้งานได้เลย (DEV)
+        $('#admin-ui').style.display = 'block';
+        note('โหลด Google Sign-In ไม่สำเร็จ → เปิดโหมดชั่วคราว (DEV)', true);
+        refreshAll().catch(e => note(e.message, true));
+      }
+    }, 100);
   }
 
   // --- Boot ---
-  window.addEventListener('load', () => {
-    if (!window.APP_CONFIG){ note('ยังไม่มี config.js', true); return; }
-    if (CONFIG.DISABLE_SIGNIN){ // เผื่อเปิด dev โหมด (ไม่ใช้จริงในการโปรดักชัน)
+  window.addEventListener('load', async () => {
+    const ok = await waitForConfig(4000);
+    if (!ok) { note('ไม่พบ config.js หรือโหลดไม่สำเร็จ', true); return; }
+
+    if (CONFIG.DISABLE_SIGNIN){
       $('#admin-ui').style.display = 'block';
       refreshAll().catch(e=>note(e.message,true));
       note('DEV MODE (Sign-In disabled)');
@@ -168,15 +190,7 @@
 
   $('#toggleForce')?.addEventListener('change', async (e) => {
     const checked = e.target.checked;
-    const month = $('#monthPicker')?.value || fmtMonth();
     try{
-      if(!checked){
-        const d = await api('dashboard', { month });
-        if ((d.submissions||0) > 0) {
-          const ok = confirm(`มีข้อมูล ${d.submissions} รายการในเดือน ${month}. ต้องการปิดฟอร์มใช่ไหม?`);
-          if(!ok){ e.target.checked = true; return; }
-        }
-      }
       const mode = checked ? 'FORCE_OPEN' : 'FORCE_CLOSED';
       await api('setFormMode', { mode });
       await loadStatus();
@@ -243,7 +257,7 @@
       const from = $('#fromMonth')?.value, to = $('#toMonth')?.value, mode = $('#rollMode')?.value;
       if(!from || !to) throw new Error('เลือก From/To month');
       const r = await api('rollover', { from, to, mode, dryRun: true });
-      $('#rollMsg').textContent = `Dry-run: ${r.count || 0} rows would be moved/copied.`;
+      $('#rollMsg').textContent = `Dry-run: ${r.count || r.data?.count || 0} rows would be moved/copied.`;
     }catch(e){ alert(e.message); }
   });
 
@@ -254,7 +268,7 @@
       const ok = confirm(`Rollover ${mode.toUpperCase()} from ${from} → ${to} ?`);
       if(!ok) return;
       const r = await api('rollover', { from, to, mode, dryRun: false });
-      $('#rollMsg').textContent = `Done: moved/copied ${r.moved || 0} rows.`;
+      $('#rollMsg').textContent = `Done: moved/copied ${r.moved || r.data?.moved || 0} rows.`;
     }catch(e){ alert(e.message); }
   });
 })();
