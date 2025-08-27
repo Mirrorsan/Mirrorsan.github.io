@@ -1,45 +1,148 @@
-
 <!doctype html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Monthly Report Admin</title>
-  <link rel="stylesheet" href="./styles.css"/>
-  <script defer src="./config.js"></script>
-  <script defer src="./admin.js"></script>
-  <!-- Google Identity Services (Sign-In) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- App styles (Light theme) -->
+  <link rel="stylesheet" href="./style2.css"/>
+
+  <!-- Flatpickr (Calendar UI) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
   <div class="container">
-    <div class="card">
-      <h1>Admin Panel</h1>
-      <div id="signin"></div>
-      <div id="admin-ui" style="display:none;">
-        <div class="row">
-          <div>
-            <label>Month</label>
-            <input type="month" id="monthPicker" />
-          </div>
-          <div style="align-self:end;">
-            <button class="btn" id="btn-refresh">Refresh</button>
-          </div>
+    <header class="topbar">
+      <h1>Monthly Report Admin</h1>
+      <div id="signin" class="small muted"></div>
+    </header>
+
+    <section id="admin-ui" style="display:none;">
+
+      <!-- FORM CONTROL & STATUS -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Form Control & Status</h2>
+          <span id="formStatusBadge" class="badge">—</span>
         </div>
 
-        <h2>Dashboard</h2>
-        <div id="dash"></div>
+        <div class="grid grid-3">
+          <!-- Toggle force -->
+          <div>
+            <label class="lbl">Toggle เปิด/ปิด (Force)</label>
+            <div class="toggle-row">
+              <label class="switch">
+                <input type="checkbox" id="toggleForce"/>
+                <span class="slider"></span>
+              </label>
+              <span id="forceLabel" class="small muted">AUTO</span>
+            </div>
+            <div class="row mt">
+              <button class="btn secondary" id="btn-reset-auto">กลับเป็น AUTO</button>
+            </div>
+            <small class="small">
+              FORCE_OPEN = เปิดตลอด · FORCE_CLOSED = ปิดต่อให้เข้าเงื่อนไข<br/>
+              AUTO = คำนวณจาก Schedule + Manual Window
+            </small>
+          </div>
 
-        <h2>Export</h2>
-        <button class="btn" id="btn-export">Export Excel (.xlsx)</button>
-        <div id="exportMsg" class="small"></div>
+          <!-- Manual Window -->
+          <div>
+            <label class="lbl">ช่วงวันที่อนุญาต (Manual Window)</label>
+            <div class="row">
+              <div style="flex:1">
+                <label>เริ่ม</label>
+                <input type="date" id="manualStart"/>
+              </div>
+              <div style="flex:1">
+                <label>สิ้นสุด</label>
+                <input type="date" id="manualEnd"/>
+              </div>
+            </div>
+            <div class="row mt">
+              <button class="btn" id="btn-save-manual-window">บันทึกช่วงวันที่</button>
+              <button class="btn secondary" id="btn-clear-manual-window">ล้างช่วงวันที่</button>
+            </div>
+            <small class="small">Final = (อยู่ใน Manual Window <b>หรือ</b> อยู่ใน Schedule) และไม่ถูก Force ปิด</small>
+          </div>
 
-        <h2>Rollover</h2>
-        <div class="row">
+          <!-- Quick month view -->
+          <div>
+            <label class="lbl">Month Quick View</label>
+            <div class="row">
+              <input type="month" id="monthPicker" />
+              <button class="btn" id="btn-refresh">Refresh</button>
+            </div>
+            <ul class="list mt">
+              <li>Schedule: <span id="schedMode">—</span></li>
+              <li>Window: <span id="schedWindow">—</span></li>
+              <li>Manual Window: <span id="manualWindowView">—</span></li>
+              <li>Mode: <code id="modeView">—</code></li>
+              <li>TZ: <code id="tzView">—</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="card">
+        <div class="card-header"><h2>Dashboard</h2></div>
+        <div class="grid grid-2">
+          <div>
+            <h3 class="muted">ภาพรวมเดือนที่เลือก</h3>
+            <div id="dashMonth"></div>
+          </div>
+          <div>
+            <h3 class="muted">สรุปตามช่วงวันที่</h3>
+            <div class="row">
+              <input type="date" id="rangeFrom"/>
+              <input type="date" id="rangeTo"/>
+              <button class="btn" id="btn-range-stats">คำนวณ</button>
+            </div>
+            <div id="dashRange" class="mt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORT -->
+      <div class="card">
+        <div class="card-header"><h2>Export</h2></div>
+        <div class="grid grid-3">
+          <div>
+            <label>Export เฉพาะเดือน</label>
+            <div class="row">
+              <input type="month" id="exportMonth"/>
+              <button class="btn" id="btn-export-specific">Export (.xlsx)</button>
+            </div>
+            <div id="exportMsg" class="small mt"></div>
+          </div>
+          <div>
+            <label>Export เดือนปัจจุบัน</label>
+            <div class="row">
+              <button class="btn" id="btn-export-current">Export Current (.xlsx)</button>
+            </div>
+          </div>
+          <div>
+            <label>Export ตามช่วงวันที่</label>
+            <div class="row">
+              <input type="date" id="exportFrom"/>
+              <input type="date" id="exportTo"/>
+            </div>
+            <div class="row mt">
+              <button class="btn" id="btn-export-range">Export Range (.xlsx)</button>
+            </div>
+            <div id="exportMsgRange" class="small mt"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROLLOVER -->
+      <div class="card">
+        <div class="card-header"><h2>Rollover</h2></div>
+        <div class="grid grid-3">
           <div><label>From</label><input type="month" id="fromMonth"/></div>
           <div><label>To</label><input type="month" id="toMonth"/></div>
-        </div>
-        <div class="row">
           <div>
             <label>Mode</label>
             <select id="rollMode">
@@ -48,13 +151,30 @@
             </select>
           </div>
         </div>
-        <div style="margin:10px 0;">
+        <div class="row mt">
           <button class="btn secondary" id="btn-dryrun">Dry-run</button>
           <button class="btn" id="btn-roll">Confirm Rollover</button>
         </div>
         <div id="rollMsg" class="small"></div>
       </div>
-    </div>
+
+      <footer class="footer">
+        <span id="whoami" class="small muted"></span>
+      </footer>
+    </section>
   </div>
+
+  <!-- config -->
+  <script src="./config.js" defer></script>
+
+  <!-- Flatpickr libs -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+
+  <!-- Main app -->
+  <script src="./admin.js"></script>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
