@@ -122,13 +122,19 @@
     console.log('[recaptcha] token len =', token && token.length);
     payload.recaptchaToken = token;
 
-    const res = await fetch(`${cfg.API_ENDPOINT}`, {
+    const res = await fetch(cfg.API_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },   // 👈 add this back
       body: JSON.stringify({ op: 'submit', payload })
     });
-    const json = await res.json();
-    if (!res.ok || !json.ok) throw new Error(json.error || 'Submit failed');
+
+    // Some environments still return text; be robust:
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch { throw new Error('Invalid server response'); }
+
+    if (!json.ok) throw new Error(json.error || 'Submit failed');
+
 
     msg.textContent = '✅ Submitted! Thank you.';
     form.reset();
