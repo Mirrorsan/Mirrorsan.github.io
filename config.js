@@ -1,6 +1,6 @@
 // ===== ของคุณ =====
 window.APP_CONFIG = {
-  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbzYO5tzIwrtVPVgA5C-6tMRkyxWPsc5YXMKFvEJEXWr6RJswsZEnz74EoY-aX0xLz7ajg/exec',
+  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbwgGQ_pvogamh1EeCYCzxceGKY2XpH9rrGzKxr6nVghdeMvf_FJ5j1rMXBme8SgdQippA/exec',
   RECAPTCHA_SITE_KEY: '6LervKorAAAAAGfASzwwujTy77Wa19sNrYepTkdK',
   OAUTH_CLIENT_ID: '696796297498-6nm6iqn4nae01nvsk2eke5e7p9lb53se.apps.googleusercontent.com',
   TIMEZONE: 'Asia/Bangkok',
