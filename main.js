@@ -13,72 +13,71 @@
   // เรียกเช็คสถานะด้วย POST แบบ simple request (ไม่มี headers)
 // เช็คสถานะฟอร์ม (ทน CORS/redirect + มี timeout)
 async function fetchFormStatus() {
-  // กันกรณี API_ENDPOINT เป็นแบบ script.google.com/macros/u/1/s/.../exec
-  const base = String(cfg.API_ENDPOINT || '').replace(/\/u\/\d+\//, '/');
+  const statusUrl = (cfg.STATUS_ENDPOINT || '').trim();
+  const apiUrl    = (cfg.API_ENDPOINT   || '').trim();
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000); // 8s timeout
-
-  // parser ที่ยอมรับทั้ง text/plain และ application/json
   const parse = (txt) => {
     try {
-      // ถ้ามี safeJSON อยู่แล้วจะกัน error ได้ดีกว่า
-      if (typeof safeJSON === 'function') {
-        const j = safeJSON(txt);
-        if (j && j.ok && j.data && typeof j.data.open === 'boolean') return j.data;
-      }
-    } catch {}
-    try {
       const j = JSON.parse(txt);
-      if (j && j.ok && j.data && typeof j.data.open === 'boolean') return j.data;
-    } catch {}
-    return null;
+      return (j && j.ok && j.data && typeof j.data.open === 'boolean') ? j.data : null;
+    } catch { return null; }
   };
 
-  try {
-    // 1) ลอง GET ก่อน (เหมาะกับทั้ง googleusercontent และ exec)
-    const r1 = await fetch(
-      `${base}${base.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`,
-      {
+  // 0) ถ้ามี STATUS_ENDPOINT (googleusercontent) ให้ลองก่อนด้วย GET
+  if (statusUrl) {
+    try {
+      const r = await fetch(`${statusUrl}${statusUrl.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`, {
         method: 'GET',
         cache: 'no-store',
         redirect: 'follow',
-        signal: controller.signal,
-      }
-    );
-    const t1 = await r1.text();
-    const d1 = parse(t1);
-    if (d1) {
-      clearTimeout(timer);
-      return d1;
+      });
+      const t = await r.text();
+      const d = parse(t);
+      if (d) return d;
+      console.warn('[status] googleusercontent GET returned non-JSON:', t.slice(0, 120));
+    } catch (e) {
+      console.warn('[status] googleusercontent GET failed:', e);
     }
-  } catch (e) {
-    console.warn('[status] GET failed:', e);
   }
 
-  try {
-    // 2) fallback: POST (ไม่ใส่ Content-Type เพื่อเลี่ยง preflight)
-    const r2 = await fetch(base, {
-      method: 'POST',
-      body: JSON.stringify({ op: 'formStatus' }),
-      cache: 'no-store',
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-    const t2 = await r2.text();
-    const d2 = parse(t2);
-    if (d2) {
-      clearTimeout(timer);
-      return d2;
+  // 1) ลอง GET ที่ exec (ตัด /u/<n>/ ออกเผื่อเป็นลิงก์แบบนั้น)
+  if (apiUrl) {
+    const execUrl = apiUrl.replace(/\/u\/\d+\//, '/');
+    try {
+      const r1 = await fetch(`${execUrl}${execUrl.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        redirect: 'follow',
+      });
+      const t1 = await r1.text();
+      const d1 = parse(t1);
+      if (d1) return d1;
+      console.warn('[status] exec GET returned non-JSON:', t1.slice(0, 120));
+    } catch (e) {
+      console.warn('[status] exec GET failed:', e);
     }
-  } catch (e) {
-    console.warn('[status] POST failed:', e);
+
+    // 2) fallback POST ที่ exec (ไม่ใส่ Content-Type เพื่อหลบ preflight)
+    try {
+      const r2 = await fetch(execUrl, {
+        method: 'POST',
+        body: JSON.stringify({ op: 'formStatus' }),
+        cache: 'no-store',
+        redirect: 'follow',
+      });
+      const t2 = await r2.text();
+      const d2 = parse(t2);
+      if (d2) return d2;
+      console.warn('[status] exec POST returned non-JSON:', t2.slice(0, 120));
+    } catch (e) {
+      console.warn('[status] exec POST failed:', e);
+    }
   }
 
-  clearTimeout(timer);
-  // ถ้ายังไม่ได้ ให้ถือว่าปิดเพื่อความปลอดภัย
+  // ถ้าทั้งหมดล้มเหลว ถือว่าปิด
   return { open: false, reason: 'status_unreachable' };
 }
+
 
 
   async function guardOpenOrRedirect() {
