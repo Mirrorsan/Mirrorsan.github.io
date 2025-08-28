@@ -1,190 +1,198 @@
+// main.js
 (function () {
-  const cfg = window.APP_CONFIG;
+  const cfg = window.APP_CONFIG; // ต้องมีใน config.js
 
-  // -------- 1) เช็คสถานะฟอร์มก่อนเริ่ม init ทั้งหมด --------
-async function fetchFormStatus() {
-  const ops = ['getPublicFormStatus', 'publicFormStatus', 'formStatus'];
-  for (const op of ops) {
+  /* -------------------- utils -------------------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  function safeJSON(text) {
+    try { return JSON.parse(text); } catch { return null; }
+  }
+
+  /* -------------------- form status -------------------- */
+  // เรียกเช็คสถานะด้วย POST แบบ simple request (ไม่มี headers)
+  async function fetchFormStatus() {
     try {
       const res = await fetch(cfg.API_ENDPOINT, {
         method: 'POST',
-        // ❌ อย่าใส่ headers เพื่อเลี่ยง preflight
-        body: JSON.stringify({ op })
+        body: JSON.stringify({ op: 'formStatus' }),
+        cache: 'no-store'
       });
-
       const text = await res.text();
-      let json; try { json = JSON.parse(text); } catch { json = null; }
+      const json = safeJSON(text);
       if (json && json.ok && json.data && typeof json.data.open === 'boolean') {
-        return json.data; // { open, mode, schedule, manualWindow, checks, ... }
+        return json.data; // { open, mode, schedule, manualWindow, ... }
       }
-    } catch (_) {
-      // ลอง op ถัดไป
+    } catch (e) {
+      console.warn('[status] fetch failed:', e);
     }
+    // ถ้าเรียกไม่ได้ ให้ถือว่าปิดเพื่อความปลอดภัย
+    return { open: false, reason: 'status_unreachable' };
   }
-  // ถ้าเรียกไม่ได้เลย ให้ถือว่าปิดเพื่อความปลอดภัย
-  return { open: false, reason: 'status_unreachable' };
-}
-
 
   async function guardOpenOrRedirect() {
     const status = await fetchFormStatus();
 
-    // ✅ เปิดฟอร์ม
+    // เปิดฟอร์ม → ให้ทำงานต่อ
     if (status.open === true) return true;
 
-    // 🔒 ปิดฟอร์ม → redirect
-    try {
-      window.location.replace('formclose.html');
-    } catch {
-      window.location.href = 'formclose.html';
-    }
+    // ปิดฟอร์ม → redirect ไปหน้าประกาศปิด
+    try { window.location.replace('formclose.html'); }
+    catch { window.location.href = 'formclose.html'; }
     return false;
   }
 
-  // -------- 2) ทำงานจริงหลังผ่านการตรวจสถานะ --------
+  /* -------------------- reCAPTCHA -------------------- */
+  async function getRecaptchaToken() {
+    const key = cfg.RECAPTCHA_SITE_KEY;
+    if (!key) return '';
+    return new Promise(resolve => {
+      let tries = 0;
+      (function wait() {
+        tries++;
+        if (window.grecaptcha && grecaptcha.execute) {
+          grecaptcha.ready(() => {
+            grecaptcha.execute(key, { action: 'submit' })
+              .then(t => resolve(t))
+              .catch(() => resolve(''));
+          });
+        } else if (tries < 30) {
+          setTimeout(wait, 100); // รอ script โหลด (สูงสุด ~3 วินาที)
+        } else {
+          resolve('');
+        }
+      })();
+    });
+  }
+
+  /* -------------------- UI helpers -------------------- */
+  function makeItemRow(placeholder = 'Type here...') {
+    const wrap = document.createElement('div');
+    wrap.className = 'item-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = placeholder;
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn ghost';
+    del.textContent = 'Remove';
+    del.onclick = () => wrap.remove();
+
+    wrap.append(input, del);
+    return wrap;
+  }
+
+  function collectTextList(container) {
+    return [...container.querySelectorAll('input[type="text"]')]
+      .map(i => i.value.trim())
+      .filter(Boolean);
+  }
+
+  function addDefaultLines(projectsList) {
+    projectsList.appendChild(makeItemRow('Project Name'));
+    ['concerns', 'risks', 'issues'].forEach(id => {
+      document.getElementById(id).appendChild(makeItemRow('Add item'));
+    });
+  }
+
+  /* -------------------- main init -------------------- */
   async function init() {
+    // 1) guard ก่อนทำงานทั้งหมด
     const allowed = await guardOpenOrRedirect();
-    if (!allowed) return; // หยุดทุกอย่างถ้าปิด
+    if (!allowed) return;
 
-    // ---- จากตรงนี้ไปคือโค้ดเดิมของคุณ (init ฟอร์ม) ----
-    const form = document.getElementById('report-form');
-    const msg = document.getElementById('msg');
-    const projectsList = document.getElementById('projects');
+    // 2) element refs
+    const form         = $('#report-form');
+    const msg          = $('#msg');
+    const projectsList = $('#projects');
 
-    const addProjectBtn = document.getElementById('add-project');
+    const addProjectBtn  = $('#add-project');
     const addLineButtons = document.querySelectorAll('.add-line[data-target]');
 
-    // Set labels from config
-    document.getElementById('lbl-key').textContent = cfg.QUESTIONS.executiveSummary.keyHighlights;
-    document.getElementById('lbl-upcoming').textContent = cfg.QUESTIONS.executiveSummary.upcomingFocus;
-    document.getElementById('lbl-psh').textContent = cfg.QUESTIONS.executiveSummary.projectSpecificHighlights;
-    document.getElementById('lbl-cta').textContent = cfg.QUESTIONS.executiveSummary.callToAction;
-    document.getElementById('lbl-concerns').textContent = cfg.QUESTIONS.concerns.concerns;
-    document.getElementById('lbl-risks').textContent = cfg.QUESTIONS.concerns.risks;
-    document.getElementById('lbl-issues').textContent = cfg.QUESTIONS.concerns.issues;
-    document.getElementById('lbl-support-legend').textContent = cfg.QUESTIONS.supportNeeded.legend;
-    document.getElementById('lbl-support-additional').textContent = cfg.QUESTIONS.supportNeeded.options.additionalResources;
-    document.getElementById('lbl-support-training').textContent = cfg.QUESTIONS.supportNeeded.options.training;
-    document.getElementById('lbl-support-managerial').textContent = cfg.QUESTIONS.supportNeeded.options.managerialSupport;
-    document.getElementById('lbl-support-collab').textContent = cfg.QUESTIONS.supportNeeded.options.collaboration;
-    document.getElementById('lbl-support-other').textContent = cfg.QUESTIONS.supportNeeded.options.other;
+    // 3) set labels จาก config
+    $('#lbl-key').textContent       = cfg.QUESTIONS.executiveSummary.keyHighlights;
+    $('#lbl-upcoming').textContent  = cfg.QUESTIONS.executiveSummary.upcomingFocus;
+    $('#lbl-psh').textContent       = cfg.QUESTIONS.executiveSummary.projectSpecificHighlights;
+    $('#lbl-cta').textContent       = cfg.QUESTIONS.executiveSummary.callToAction;
 
-    // Helpers
-    function makeItemRow(placeholder = 'Type here...') {
-      const wrap = document.createElement('div');
-      wrap.className = 'item-row';
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = placeholder;
-      input.required = false;
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'btn ghost';
-      del.textContent = 'Remove';
-      del.onclick = () => wrap.remove();
-      wrap.appendChild(input);
-      wrap.appendChild(del);
-      return wrap;
-    }
+    $('#lbl-concerns').textContent  = cfg.QUESTIONS.concerns.concerns;
+    $('#lbl-risks').textContent     = cfg.QUESTIONS.concerns.risks;
+    $('#lbl-issues').textContent    = cfg.QUESTIONS.concerns.issues;
 
-    function addDefaultLines() {
-      projectsList.appendChild(makeItemRow('Project Name'));
-      ['concerns', 'risks', 'issues'].forEach(id => {
-        document.getElementById(id).appendChild(makeItemRow('Add item'));
-      });
-    }
+    $('#lbl-support-legend').textContent     = cfg.QUESTIONS.supportNeeded.legend;
+    $('#lbl-support-additional').textContent = cfg.QUESTIONS.supportNeeded.options.additionalResources;
+    $('#lbl-support-training').textContent   = cfg.QUESTIONS.supportNeeded.options.training;
+    $('#lbl-support-managerial').textContent = cfg.QUESTIONS.supportNeeded.options.managerialSupport;
+    $('#lbl-support-collab').textContent     = cfg.QUESTIONS.supportNeeded.options.collaboration;
+    $('#lbl-support-other').textContent      = cfg.QUESTIONS.supportNeeded.options.other;
 
+    // 4) wiring ปุ่มเพิ่ม/ลบแถว
     addProjectBtn.onclick = () => projectsList.appendChild(makeItemRow('Project Name'));
     addLineButtons.forEach(btn => {
-      btn.onclick = () => document.getElementById(btn.dataset.target).appendChild(makeItemRow('Add item'));
+      btn.onclick = () => document.getElementById(btn.dataset.target)
+        .appendChild(makeItemRow('Add item'));
     });
 
-    window.addEventListener('load', addDefaultLines);
+    // แถวเริ่มต้น
+    addDefaultLines(projectsList);
 
-    async function getRecaptchaToken() {
-      const key = cfg.RECAPTCHA_SITE_KEY;
-      if (!key) return '';
-      let tries = 0;
-      return new Promise(resolve => {
-        const wait = () => {
-          tries++;
-          if (window.grecaptcha && grecaptcha.execute) {
-            grecaptcha.ready(() => {
-              grecaptcha.execute(key, { action: 'submit' })
-                .then(t => resolve(t))
-                .catch(() => resolve(''));
-            });
-          } else if (tries < 30) {
-            setTimeout(wait, 100); // retry up to ~3s
-          } else {
-            resolve('');
-          }
-        };
-        wait();
-      });
-    }
-
+    // 5) handle submit
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const submitBtn = form.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
       msg.textContent = 'Submitting...';
 
       try {
+        // เก็บข้อมูล
         const data = new FormData(form);
-        const projects = [...projectsList.querySelectorAll('input[type=text]')]
-          .map(i => i.value.trim()).filter(Boolean);
-
-        const concerns = [...document.querySelectorAll('#concerns input')].map(i => i.value.trim()).filter(Boolean);
-        const risks = [...document.querySelectorAll('#risks input')].map(i => i.value.trim()).filter(Boolean);
-        const issues = [...document.querySelectorAll('#issues input')].map(i => i.value.trim()).filter(Boolean);
-        const support = {
-          additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
-          training:            form.querySelector('input[name="support_training"]').checked,
-          managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
-          collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
-          other:               form.querySelector('input[name="support_other"]').checked
-        };
-
         const payload = {
           firstName: (data.get('firstName') || '').trim(),
-          lastName: (data.get('lastName') || '').trim(),
-          projects,
+          lastName:  (data.get('lastName')  || '').trim(),
+          projects:  collectTextList(projectsList),
           executiveSummary: {
-            keyHighlights: (data.get('keyHighlights') || '').trim(),
-            upcomingFocus: (data.get('upcomingFocus') || '').trim(),
+            keyHighlights:             (data.get('keyHighlights') || '').trim(),
+            upcomingFocus:             (data.get('upcomingFocus') || '').trim(),
             projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
-            callToAction: (data.get('callToAction') || '').trim()
+            callToAction:              (data.get('callToAction') || '').trim()
           },
-          concerns: { concerns, risks, issues },
-          support
+          concerns: {
+            concerns: collectTextList(document.getElementById('concerns')),
+            risks:    collectTextList(document.getElementById('risks')),
+            issues:   collectTextList(document.getElementById('issues'))
+          },
+          support: {
+            additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
+            training:            form.querySelector('input[name="support_training"]').checked,
+            managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
+            collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
+            other:               form.querySelector('input[name="support_other"]').checked
+          },
+          recaptchaToken: await getRecaptchaToken()
         };
 
-        const token = await getRecaptchaToken();
-        payload.recaptchaToken = token || '';
-
+        // ส่งแบบ simple request (ไม่มี headers) เพื่อเลี่ยง CORS
         const res = await fetch(cfg.API_ENDPOINT, {
           method: 'POST',
-          body: JSON.stringify({ op: 'submit', payload })
+          body: JSON.stringify({ op: 'submit', payload }),
+          cache: 'no-store'
         });
 
         const text = await res.text();
-        let json;
-        try { json = JSON.parse(text); }
-        catch { throw new Error('Invalid server response'); }
-
+        const json = safeJSON(text) || {};
         if (!json.ok) throw new Error(json.error || 'Submit failed');
 
         msg.textContent = '✅ Submitted! Thank you.';
         form.reset();
         projectsList.innerHTML = '';
         ['concerns','risks','issues'].forEach(id => document.getElementById(id).innerHTML = '');
-        addDefaultLines();
+        addDefaultLines(projectsList);
       } catch (err) {
         console.error(err);
-        msg.textContent = `❌ ${err.message}`;
+        msg.textContent = `❌ ${err.message || 'Failed to submit'}`;
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit';
@@ -192,6 +200,6 @@ async function fetchFormStatus() {
     });
   }
 
-  // เริ่มทำงาน
+  // bootstrap
   init();
 })();
