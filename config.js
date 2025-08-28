@@ -1,7 +1,7 @@
 // ===== ของคุณ =====
 window.APP_CONFIG = {
-  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycbxzkJhuxSYkvTYh4MU8rdQKDBiU_B6J5eQLsFymH-3yrlDwVtZojJb40Rbu2VJBtlpd0A/exec',
-  STATUS_ENDPOINT: 'https://script.google.com/macros/s/AKfycbxzkJhuxSYkvTYh4MU8rdQKDBiU_B6J5eQLsFymH-3yrlDwVtZojJb40Rbu2VJBtlpd0A/exec?op=formStatus',
+  API_ENDPOINT: 'https://script.google.com/macros/s/AKfycby45rRIz-QC2OjiF6HY-D1_EnVX_WG3Yd2NrDOcQpE813qXX_795XB_3TuisWWnYZMF7w/exec',
+  STATUS_ENDPOINT: 'https://script.google.com/macros/s/AKfycby45rRIz-QC2OjiF6HY-D1_EnVX_WG3Yd2NrDOcQpE813qXX_795XB_3TuisWWnYZMF7w/exec?op=formStatus',
   RECAPTCHA_SITE_KEY: '6LervKorAAAAAGfASzwwujTy77Wa19sNrYepTkdK',
   OAUTH_CLIENT_ID: '696796297498-6nm6iqn4nae01nvsk2eke5e7p9lb53se.apps.googleusercontent.com',
   TIMEZONE: 'Asia/Bangkok',
