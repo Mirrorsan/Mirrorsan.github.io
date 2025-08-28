@@ -1,85 +1,93 @@
-(function() {
-  const cfg = window.APP_CONFIG;
-  const form = document.getElementById('report-form');
-  const msg = document.getElementById('msg');
-  const projectsList = document.getElementById('projects');
+// main.js
+(function () {
+  const cfg = window.APP_CONFIG; // ต้องมีใน config.js
 
-  const addProjectBtn = document.getElementById('add-project');
-  const addLineButtons = document.querySelectorAll('.add-line[data-target]');
+  /* -------------------- utils -------------------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
 
-  // Set labels from config
-  document.getElementById('lbl-key').textContent = cfg.QUESTIONS.executiveSummary.keyHighlights;
-  document.getElementById('lbl-upcoming').textContent = cfg.QUESTIONS.executiveSummary.upcomingFocus;
-  document.getElementById('lbl-psh').textContent = cfg.QUESTIONS.executiveSummary.projectSpecificHighlights;
-  document.getElementById('lbl-cta').textContent = cfg.QUESTIONS.executiveSummary.callToAction;
-  document.getElementById('lbl-concerns').textContent = cfg.QUESTIONS.concerns.concerns;
-  document.getElementById('lbl-risks').textContent = cfg.QUESTIONS.concerns.risks;
-  document.getElementById('lbl-issues').textContent = cfg.QUESTIONS.concerns.issues;
-  document.getElementById('lbl-support-legend').textContent = cfg.QUESTIONS.supportNeeded.legend;
-  document.getElementById('lbl-support-additional').textContent = cfg.QUESTIONS.supportNeeded.options.additionalResources;
-  document.getElementById('lbl-support-training').textContent = cfg.QUESTIONS.supportNeeded.options.training;
-  document.getElementById('lbl-support-managerial').textContent = cfg.QUESTIONS.supportNeeded.options.managerialSupport;
-  document.getElementById('lbl-support-collab').textContent = cfg.QUESTIONS.supportNeeded.options.collaboration;
-  document.getElementById('lbl-support-other').textContent = cfg.QUESTIONS.supportNeeded.options.other;
+  function safeJSON(text) {
+    try { return JSON.parse(text); } catch { return null; }
+  }
 
-  // ---------- Helpers ----------
-  function makeItemRow(placeholder = 'Type here...', multiline = false) {
-    const wrap = document.createElement('div');
-    wrap.className = 'item-row';
+  /* -------------------- form status -------------------- */
+  // เช็คสถานะฟอร์ม (ทน CORS/redirect + มี timeout)
+  async function fetchFormStatus() {
+    const statusUrl = (cfg.STATUS_ENDPOINT || '').trim();
+    const apiUrl    = (cfg.API_ENDPOINT   || '').trim();
 
-    const field = multiline ? document.createElement('textarea') : document.createElement('input');
-    if (!multiline) field.type = 'text';
-    field.placeholder = placeholder;
-    field.required = false;
+    const parse = (txt) => {
+      try {
+        const j = JSON.parse(txt);
+        return (j && j.ok && j.data && typeof j.data.open === 'boolean') ? j.data : null;
+      } catch { return null; }
+    };
 
-    if (multiline) {
-      field.rows = 3;                 // initial height
-      field.style.resize = 'vertical';
+    if (statusUrl) {
+      try {
+        const r = await fetch(`${statusUrl}${statusUrl.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          redirect: 'follow',
+        });
+        const t = await r.text();
+        const d = parse(t);
+        if (d) return d;
+        console.warn('[status] googleusercontent GET returned non-JSON:', t.slice(0, 120));
+      } catch (e) {
+        console.warn('[status] googleusercontent GET failed:', e);
+      }
     }
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'btn ghost';
-    del.textContent = 'Remove';
-    del.onclick = () => wrap.remove();
+    if (apiUrl) {
+      const execUrl = apiUrl.replace(/\/u\/\d+\//, '/');
+      try {
+        const r1 = await fetch(`${execUrl}${execUrl.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          redirect: 'follow',
+        });
+        const t1 = await r1.text();
+        const d1 = parse(t1);
+        if (d1) return d1;
+        console.warn('[status] exec GET returned non-JSON:', t1.slice(0, 120));
+      } catch (e) {
+        console.warn('[status] exec GET failed:', e);
+      }
 
-    wrap.appendChild(field);
-    wrap.appendChild(del);
-    return wrap;
+      try {
+        const r2 = await fetch(execUrl, {
+          method: 'POST',
+          body: JSON.stringify({ op: 'formStatus' }),
+          cache: 'no-store',
+          redirect: 'follow',
+        });
+        const t2 = await r2.text();
+        const d2 = parse(t2);
+        if (d2) return d2;
+        console.warn('[status] exec POST returned non-JSON:', t2.slice(0, 120));
+      } catch (e) {
+        console.warn('[status] exec POST failed:', e);
+      }
+    }
+
+    return { open: false, reason: 'status_unreachable' };
   }
 
-  // เก็บค่าจากทั้ง input และ textarea (คืนค่าเป็น array ของสตริง)
-  const getValues = (root, selector) =>
-    [...root.querySelectorAll(selector)]
-      .map(el => el.value.trim())
-      .filter(Boolean);
-
-  function addDefaultLines() {
-    // Projects → textarea
-    projectsList.appendChild(makeItemRow('Project Name / details', true));
-
-    // Concerns / Risks / Issues → textarea
-    ['concerns','risks','issues'].forEach(id => {
-      document.getElementById(id).appendChild(makeItemRow('Add item', true));
-    });
+  async function guardOpenOrRedirect() {
+    const status = await fetchFormStatus();
+    if (status.open === true) return true;
+    try { window.location.replace('formclose.html'); }
+    catch { window.location.href = 'formclose.html'; }
+    return false;
   }
 
-  addProjectBtn.onclick = () =>
-    projectsList.appendChild(makeItemRow('Project Name / details', true));
-
-  addLineButtons.forEach(btn => {
-    btn.onclick = () =>
-      document.getElementById(btn.dataset.target).appendChild(makeItemRow('Add item', true));
-  });
-
-  window.addEventListener('load', addDefaultLines);
-
+  /* -------------------- reCAPTCHA -------------------- */
   async function getRecaptchaToken() {
     const key = cfg.RECAPTCHA_SITE_KEY;
     if (!key) return '';
-    let tries = 0;
     return new Promise(resolve => {
-      const wait = () => {
+      let tries = 0;
+      (function wait() {
         tries++;
         if (window.grecaptcha && grecaptcha.execute) {
           grecaptcha.ready(() => {
@@ -88,84 +96,155 @@
               .catch(() => resolve(''));
           });
         } else if (tries < 30) {
-          setTimeout(wait, 100); // retry up to ~3s
+          setTimeout(wait, 100);
         } else {
           resolve('');
         }
-      };
-      wait();
+      })();
     });
   }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  /* -------------------- UI helpers (textarea version) -------------------- */
+  // แถวรายการที่ใช้ <textarea> แทน <input> สำหรับ Projects/Concerns/Risks/Issues
+  function makeItemRow(placeholder = 'Type here...') {
+    const wrap = document.createElement('div');
+    wrap.className = 'item-row';
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;                  // 🔒 lock
-    submitBtn.textContent = 'Submitting...';    // UX feedback
-    msg.textContent = 'Submitting...';
+    const field = document.createElement('textarea');
+    field.placeholder = placeholder;
+    field.rows = 3;                 // ความสูงเริ่มต้น
+    field.style.resize = 'vertical';
+    field.required = false;
 
-    try {
-      const data = new FormData(form);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn ghost';
+    del.textContent = 'Remove';
+    del.onclick = () => wrap.remove();
 
-      // ✅ รองรับทั้ง input และ textarea โดย payload ยังเป็น array ของสตริงเหมือนเดิม
-      const projects = getValues(projectsList, 'input[type="text"], textarea');
-      const concerns = getValues(document, '#concerns input, #concerns textarea');
-      const risks    = getValues(document, '#risks input, #risks textarea');
-      const issues   = getValues(document, '#issues input, #issues textarea');
+    wrap.append(field, del);
+    return wrap;
+  }
 
-      const support = {
-        additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
-        training:            form.querySelector('input[name="support_training"]').checked,
-        managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
-        collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
-        other:               form.querySelector('input[name="support_other"]').checked
-      };
+  // ดึงค่าทั้งจาก input และ textarea (payload ยังเป็น array ของสตริงเหมือนเดิม)
+  function collectTextList(container) {
+    return [...container.querySelectorAll('input[type="text"], textarea')]
+      .map(el => el.value.trim())
+      .filter(Boolean);
+  }
 
-      const payload = {
-        firstName: (data.get('firstName') || '').trim(),
-        lastName: (data.get('lastName') || '').trim(),
-        projects,
-        executiveSummary: {
-          keyHighlights: (data.get('keyHighlights') || '').trim(),
-          upcomingFocus: (data.get('upcomingFocus') || '').trim(),
-          projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
-          callToAction: (data.get('callToAction') || '').trim()
-        },
-        concerns: { concerns, risks, issues },
-        support
-      };
+  function addDefaultLines(projectsList) {
+    // Projects (textarea)
+    projectsList.appendChild(makeItemRow('Project Name / details'));
+    // Concerns / Risks / Issues (textarea)
+    ['concerns', 'risks', 'issues'].forEach(id => {
+      document.getElementById(id).appendChild(makeItemRow('Add item'));
+    });
+  }
 
-      const token = await getRecaptchaToken();
-      console.log('[recaptcha] token len =', token && token.length);
-      payload.recaptchaToken = token;
+  /* -------------------- main init -------------------- */
+  async function init() {
+    // 1) guard
+    const allowed = await guardOpenOrRedirect();
+    if (!allowed) return;
 
-      // หมายเหตุ: ถ้า backend ตั้ง CORS แล้ว จะใส่ header Content-Type ก็ได้
-      const res = await fetch(cfg.API_ENDPOINT, {
-        method: 'POST',
-        // headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ op: 'submit', payload })
-      });
+    // 2) element refs
+    const form         = $('#report-form');
+    const msg          = $('#msg');
+    const projectsList = $('#projects');
 
-      // บางสภาพแวดล้อมคืนเป็น text — parse ให้ robust
-      const text = await res.text();
-      let json;
-      try { json = JSON.parse(text); }
-      catch { throw new Error('Invalid server response'); }
+    const addProjectBtn  = $('#add-project');
+    const addLineButtons = document.querySelectorAll('.add-line[data-target]');
 
-      if (!json.ok) throw new Error(json.error || 'Submit failed');
+    // 3) labels
+    $('#lbl-key').textContent       = cfg.QUESTIONS.executiveSummary.keyHighlights;
+    $('#lbl-upcoming').textContent  = cfg.QUESTIONS.executiveSummary.upcomingFocus;
+    $('#lbl-psh').textContent       = cfg.QUESTIONS.executiveSummary.projectSpecificHighlights;
+    $('#lbl-cta').textContent       = cfg.QUESTIONS.executiveSummary.callToAction;
 
-      msg.textContent = '✅ Submitted! Thank you.';
-      form.reset();
-      projectsList.innerHTML = '';
-      ['concerns','risks','issues'].forEach(id => (document.getElementById(id).innerHTML = ''));
-      addDefaultLines();
-    } catch (err) {
-      console.error(err);
-      msg.textContent = `❌ ${err.message}`;
-    } finally {
-      submitBtn.disabled = false;               // 🔓 unlock
-      submitBtn.textContent = 'Submit';         // restore label
-    }
-  });
+    $('#lbl-concerns').textContent  = cfg.QUESTIONS.concerns.concerns;
+    $('#lbl-risks').textContent     = cfg.QUESTIONS.concerns.risks;
+    $('#lbl-issues').textContent    = cfg.QUESTIONS.concerns.issues;
+
+    $('#lbl-support-legend').textContent     = cfg.QUESTIONS.supportNeeded.legend;
+    $('#lbl-support-additional').textContent = cfg.QUESTIONS.supportNeeded.options.additionalResources;
+    $('#lbl-support-training').textContent   = cfg.QUESTIONS.supportNeeded.options.training;
+    $('#lbl-support-managerial').textContent = cfg.QUESTIONS.supportNeeded.options.managerialSupport;
+    $('#lbl-support-collab').textContent     = cfg.QUESTIONS.supportNeeded.options.collaboration;
+    $('#lbl-support-other').textContent      = cfg.QUESTIONS.supportNeeded.options.other;
+
+    // 4) ปุ่มเพิ่มแถว (ทำงานกับ textarea version)
+    addProjectBtn.onclick = () =>
+      projectsList.appendChild(makeItemRow('Project Name / details'));
+    addLineButtons.forEach(btn => {
+      btn.onclick = () =>
+        document.getElementById(btn.dataset.target).appendChild(makeItemRow('Add item'));
+    });
+
+    // แถวเริ่มต้น
+    addDefaultLines(projectsList);
+
+    // 5) submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+      msg.textContent = 'Submitting...';
+
+      try {
+        const data = new FormData(form);
+        const payload = {
+          firstName: (data.get('firstName') || '').trim(),
+          lastName:  (data.get('lastName')  || '').trim(),
+          projects:  collectTextList(projectsList),
+          executiveSummary: {
+            keyHighlights:             (data.get('keyHighlights') || '').trim(),
+            upcomingFocus:             (data.get('upcomingFocus') || '').trim(),
+            projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
+            callToAction:              (data.get('callToAction') || '').trim()
+          },
+          concerns: {
+            concerns: collectTextList(document.getElementById('concerns')),
+            risks:    collectTextList(document.getElementById('risks')),
+            issues:   collectTextList(document.getElementById('issues'))
+          },
+          support: {
+            additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
+            training:            form.querySelector('input[name="support_training"]').checked,
+            managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
+            collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
+            other:               form.querySelector('input[name="support_other"]').checked
+          },
+          recaptchaToken: await getRecaptchaToken()
+        };
+
+        // ส่งแบบ simple request เลี่ยง preflight/CORS
+        const res = await fetch(cfg.API_ENDPOINT, {
+          method: 'POST',
+          body: JSON.stringify({ op: 'submit', payload }),
+          cache: 'no-store'
+        });
+
+        const text = await res.text();
+        const json = safeJSON(text) || {};
+        if (!json.ok) throw new Error(json.error || 'Submit failed');
+
+        msg.textContent = '✅ Submitted! Thank you.';
+        form.reset();
+        projectsList.innerHTML = '';
+        ['concerns','risks','issues'].forEach(id => (document.getElementById(id).innerHTML = ''));
+        addDefaultLines(projectsList);
+      } catch (err) {
+        console.error(err);
+        msg.textContent = `❌ ${err.message || 'Failed to submit'}`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+      }
+    });
+  }
+
+  // bootstrap
+  init();
 })();
