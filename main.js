@@ -2,26 +2,29 @@
   const cfg = window.APP_CONFIG;
 
   // -------- 1) เช็คสถานะฟอร์มก่อนเริ่ม init ทั้งหมด --------
-  async function fetchFormStatus() {
-    // พยายามเรียกชื่อ op ได้หลายแบบ เผื่อฝั่ง server เปิดไว้ต่างชื่อ
-    const ops = ['getPublicFormStatus', 'publicFormStatus', 'formStatus'];
-    for (const op of ops) {
-      try {
-        const res = await fetch(cfg.API_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ op })
-        });
-        const text = await res.text();
-        let json; try { json = JSON.parse(text); } catch { continue; }
-        if (json && json.ok && json.data && typeof json.data.open === 'boolean') {
-          return json.data; // { open, mode, schedule, manualWindow, checks, ... }
-        }
-      } catch (_) { /* ลอง op ถัดไป */ }
+async function fetchFormStatus() {
+  const ops = ['getPublicFormStatus', 'publicFormStatus', 'formStatus'];
+  for (const op of ops) {
+    try {
+      const res = await fetch(cfg.API_ENDPOINT, {
+        method: 'POST',
+        // ❌ อย่าใส่ headers เพื่อเลี่ยง preflight
+        body: JSON.stringify({ op })
+      });
+
+      const text = await res.text();
+      let json; try { json = JSON.parse(text); } catch { json = null; }
+      if (json && json.ok && json.data && typeof json.data.open === 'boolean') {
+        return json.data; // { open, mode, schedule, manualWindow, checks, ... }
+      }
+    } catch (_) {
+      // ลอง op ถัดไป
     }
-    // ถ้าเรียกไม่ได้เลย ให้ถือว่าปิดเพื่อความปลอดภัย
-    return { open: false, reason: 'status_unreachable' };
   }
+  // ถ้าเรียกไม่ได้เลย ให้ถือว่าปิดเพื่อความปลอดภัย
+  return { open: false, reason: 'status_unreachable' };
+}
+
 
   async function guardOpenOrRedirect() {
     const status = await fetchFormStatus();
@@ -164,7 +167,6 @@
 
         const res = await fetch(cfg.API_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ op: 'submit', payload })
         });
 
