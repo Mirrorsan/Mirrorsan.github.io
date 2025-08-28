@@ -11,24 +11,75 @@
 
   /* -------------------- form status -------------------- */
   // เรียกเช็คสถานะด้วย POST แบบ simple request (ไม่มี headers)
-  async function fetchFormStatus() {
+// เช็คสถานะฟอร์ม (ทน CORS/redirect + มี timeout)
+async function fetchFormStatus() {
+  // กันกรณี API_ENDPOINT เป็นแบบ script.google.com/macros/u/1/s/.../exec
+  const base = String(cfg.API_ENDPOINT || '').replace(/\/u\/\d+\//, '/');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+  // parser ที่ยอมรับทั้ง text/plain และ application/json
+  const parse = (txt) => {
     try {
-      const res = await fetch(cfg.API_ENDPOINT, {
-        method: 'POST',
-        body: JSON.stringify({ op: 'formStatus' }),
-        cache: 'no-store'
-      });
-      const text = await res.text();
-      const json = safeJSON(text);
-      if (json && json.ok && json.data && typeof json.data.open === 'boolean') {
-        return json.data; // { open, mode, schedule, manualWindow, ... }
+      // ถ้ามี safeJSON อยู่แล้วจะกัน error ได้ดีกว่า
+      if (typeof safeJSON === 'function') {
+        const j = safeJSON(txt);
+        if (j && j.ok && j.data && typeof j.data.open === 'boolean') return j.data;
       }
-    } catch (e) {
-      console.warn('[status] fetch failed:', e);
+    } catch {}
+    try {
+      const j = JSON.parse(txt);
+      if (j && j.ok && j.data && typeof j.data.open === 'boolean') return j.data;
+    } catch {}
+    return null;
+  };
+
+  try {
+    // 1) ลอง GET ก่อน (เหมาะกับทั้ง googleusercontent และ exec)
+    const r1 = await fetch(
+      `${base}${base.includes('?') ? '&' : '?'}op=formStatus&_=${Date.now()}`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+        redirect: 'follow',
+        signal: controller.signal,
+      }
+    );
+    const t1 = await r1.text();
+    const d1 = parse(t1);
+    if (d1) {
+      clearTimeout(timer);
+      return d1;
     }
-    // ถ้าเรียกไม่ได้ ให้ถือว่าปิดเพื่อความปลอดภัย
-    return { open: false, reason: 'status_unreachable' };
+  } catch (e) {
+    console.warn('[status] GET failed:', e);
   }
+
+  try {
+    // 2) fallback: POST (ไม่ใส่ Content-Type เพื่อเลี่ยง preflight)
+    const r2 = await fetch(base, {
+      method: 'POST',
+      body: JSON.stringify({ op: 'formStatus' }),
+      cache: 'no-store',
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    const t2 = await r2.text();
+    const d2 = parse(t2);
+    if (d2) {
+      clearTimeout(timer);
+      return d2;
+    }
+  } catch (e) {
+    console.warn('[status] POST failed:', e);
+  }
+
+  clearTimeout(timer);
+  // ถ้ายังไม่ได้ ให้ถือว่าปิดเพื่อความปลอดภัย
+  return { open: false, reason: 'status_unreachable' };
+}
+
 
   async function guardOpenOrRedirect() {
     const status = await fetchFormStatus();
