@@ -1,4 +1,3 @@
-
 (function() {
   const cfg = window.APP_CONFIG;
   const form = document.getElementById('report-form');
@@ -23,131 +22,150 @@
   document.getElementById('lbl-support-collab').textContent = cfg.QUESTIONS.supportNeeded.options.collaboration;
   document.getElementById('lbl-support-other').textContent = cfg.QUESTIONS.supportNeeded.options.other;
 
-
-  // Helpers
-  function makeItemRow(placeholder='Type here...') {
+  // ---------- Helpers ----------
+  function makeItemRow(placeholder = 'Type here...', multiline = false) {
     const wrap = document.createElement('div');
     wrap.className = 'item-row';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = placeholder;
-    input.required = false;
+
+    const field = multiline ? document.createElement('textarea') : document.createElement('input');
+    if (!multiline) field.type = 'text';
+    field.placeholder = placeholder;
+    field.required = false;
+
+    if (multiline) {
+      field.rows = 3;                 // initial height
+      field.style.resize = 'vertical';
+    }
+
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'btn ghost';
     del.textContent = 'Remove';
     del.onclick = () => wrap.remove();
-    wrap.appendChild(input);
+
+    wrap.appendChild(field);
     wrap.appendChild(del);
     return wrap;
   }
 
+  // เก็บค่าจากทั้ง input และ textarea (คืนค่าเป็น array ของสตริง)
+  const getValues = (root, selector) =>
+    [...root.querySelectorAll(selector)]
+      .map(el => el.value.trim())
+      .filter(Boolean);
+
   function addDefaultLines() {
-    projectsList.appendChild(makeItemRow('Project Name'));
+    // Projects → textarea
+    projectsList.appendChild(makeItemRow('Project Name / details', true));
+
+    // Concerns / Risks / Issues → textarea
     ['concerns','risks','issues'].forEach(id => {
-      document.getElementById(id).appendChild(makeItemRow('Add item'));
+      document.getElementById(id).appendChild(makeItemRow('Add item', true));
     });
   }
 
-  addProjectBtn.onclick = () => projectsList.appendChild(makeItemRow('Project Name'));
+  addProjectBtn.onclick = () =>
+    projectsList.appendChild(makeItemRow('Project Name / details', true));
+
   addLineButtons.forEach(btn => {
-    btn.onclick = () => document.getElementById(btn.dataset.target).appendChild(makeItemRow('Add item'));
+    btn.onclick = () =>
+      document.getElementById(btn.dataset.target).appendChild(makeItemRow('Add item', true));
   });
 
   window.addEventListener('load', addDefaultLines);
 
   async function getRecaptchaToken() {
-  const key = cfg.RECAPTCHA_SITE_KEY;
-  if (!key) return '';
-  let tries = 0;
-  return new Promise(resolve => {
-    const wait = () => {
-      tries++;
-      if (window.grecaptcha && grecaptcha.execute) {
-        grecaptcha.ready(() => {
-          grecaptcha.execute(key, { action: 'submit' })
-            .then(t => resolve(t))
-            .catch(() => resolve(''));
-        });
-      } else if (tries < 30) {
-        setTimeout(wait, 100); // retry up to ~3s
-      } else {
-        resolve('');
-      }
-    };
-    wait();
-  });
-}
-
+    const key = cfg.RECAPTCHA_SITE_KEY;
+    if (!key) return '';
+    let tries = 0;
+    return new Promise(resolve => {
+      const wait = () => {
+        tries++;
+        if (window.grecaptcha && grecaptcha.execute) {
+          grecaptcha.ready(() => {
+            grecaptcha.execute(key, { action: 'submit' })
+              .then(t => resolve(t))
+              .catch(() => resolve(''));
+          });
+        } else if (tries < 30) {
+          setTimeout(wait, 100); // retry up to ~3s
+        } else {
+          resolve('');
+        }
+      };
+      wait();
+    });
+  }
 
   form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const submitBtn = form.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;                  // 🔒 lock
-  submitBtn.textContent = 'Submitting...';    // optional UX feedback
-  msg.textContent = 'Submitting...';
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;                  // 🔒 lock
+    submitBtn.textContent = 'Submitting...';    // UX feedback
+    msg.textContent = 'Submitting...';
 
-  try {
-    const data = new FormData(form);
-    const projects = [...projectsList.querySelectorAll('input[type=text]')]
-      .map(i => i.value.trim()).filter(Boolean);
+    try {
+      const data = new FormData(form);
 
-    const concerns = [...document.querySelectorAll('#concerns input')].map(i => i.value.trim()).filter(Boolean);
-    const risks    = [...document.querySelectorAll('#risks input')].map(i => i.value.trim()).filter(Boolean);
-    const issues   = [...document.querySelectorAll('#issues input')].map(i => i.value.trim()).filter(Boolean);
-    const support = {
-      additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
-      training:            form.querySelector('input[name="support_training"]').checked,
-      managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
-      collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
-      other:               form.querySelector('input[name="support_other"]').checked
-    };
+      // ✅ รองรับทั้ง input และ textarea โดย payload ยังเป็น array ของสตริงเหมือนเดิม
+      const projects = getValues(projectsList, 'input[type="text"], textarea');
+      const concerns = getValues(document, '#concerns input, #concerns textarea');
+      const risks    = getValues(document, '#risks input, #risks textarea');
+      const issues   = getValues(document, '#issues input, #issues textarea');
 
-    const payload = {
-      firstName: (data.get('firstName') || '').trim(),
-      lastName: (data.get('lastName') || '').trim(),
-      projects,
-      executiveSummary: {
-        keyHighlights: (data.get('keyHighlights') || '').trim(),
-        upcomingFocus: (data.get('upcomingFocus') || '').trim(),
-        projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
-        callToAction: (data.get('callToAction') || '').trim()
-      },
-      concerns: { concerns, risks, issues },
-      support
-    };
+      const support = {
+        additionalResources: form.querySelector('input[name="support_additionalResources"]').checked,
+        training:            form.querySelector('input[name="support_training"]').checked,
+        managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
+        collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
+        other:               form.querySelector('input[name="support_other"]').checked
+      };
 
-    const token = await getRecaptchaToken();
-    console.log('[recaptcha] token len =', token && token.length);
-    payload.recaptchaToken = token;
+      const payload = {
+        firstName: (data.get('firstName') || '').trim(),
+        lastName: (data.get('lastName') || '').trim(),
+        projects,
+        executiveSummary: {
+          keyHighlights: (data.get('keyHighlights') || '').trim(),
+          upcomingFocus: (data.get('upcomingFocus') || '').trim(),
+          projectSpecificHighlights: (data.get('projectSpecificHighlights') || '').trim(),
+          callToAction: (data.get('callToAction') || '').trim()
+        },
+        concerns: { concerns, risks, issues },
+        support
+      };
 
-    const res = await fetch(cfg.API_ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify({ op: 'submit', payload })
-    });
+      const token = await getRecaptchaToken();
+      console.log('[recaptcha] token len =', token && token.length);
+      payload.recaptchaToken = token;
 
-    // Some environments still return text; be robust:
-    const text = await res.text();
-    let json;
-    try { json = JSON.parse(text); }
-    catch { throw new Error('Invalid server response'); }
+      // หมายเหตุ: ถ้า backend ตั้ง CORS แล้ว จะใส่ header Content-Type ก็ได้
+      const res = await fetch(cfg.API_ENDPOINT, {
+        method: 'POST',
+        // headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'submit', payload })
+      });
 
-    if (!json.ok) throw new Error(json.error || 'Submit failed');
+      // บางสภาพแวดล้อมคืนเป็น text — parse ให้ robust
+      const text = await res.text();
+      let json;
+      try { json = JSON.parse(text); }
+      catch { throw new Error('Invalid server response'); }
 
+      if (!json.ok) throw new Error(json.error || 'Submit failed');
 
-    msg.textContent = '✅ Submitted! Thank you.';
-    form.reset();
-    projectsList.innerHTML = '';
-    ['concerns','risks','issues'].forEach(id => document.getElementById(id).innerHTML = '');
-    addDefaultLines();
-  } catch (err) {
-    console.error(err);
-    msg.textContent = `❌ ${err.message}`;
-  } finally {
-    submitBtn.disabled = false;               // 🔓 unlock
-    submitBtn.textContent = 'Submit';         // restore label
-  }
-});
-
+      msg.textContent = '✅ Submitted! Thank you.';
+      form.reset();
+      projectsList.innerHTML = '';
+      ['concerns','risks','issues'].forEach(id => (document.getElementById(id).innerHTML = ''));
+      addDefaultLines();
+    } catch (err) {
+      console.error(err);
+      msg.textContent = `❌ ${err.message}`;
+    } finally {
+      submitBtn.disabled = false;               // 🔓 unlock
+      submitBtn.textContent = 'Submit';         // restore label
+    }
+  });
 })();
