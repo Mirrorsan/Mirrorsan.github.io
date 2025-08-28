@@ -30,6 +30,7 @@ window.APP_CONFIG = {
 // ===== bridge ให้โค้ดเดิมที่อ้าง window.CONFIG ทำงานร่วมกัน =====
 window.CONFIG = {
   API_URL: window.APP_CONFIG.API_ENDPOINT,
+  API_URL_STATUS: window.APP_CONFIG.STATUS_ENDPOINT,
   OAUTH_CLIENT_ID: window.APP_CONFIG.OAUTH_CLIENT_ID,
   RECAPTCHA_SITE_KEY: window.APP_CONFIG.RECAPTCHA_SITE_KEY,
   DISABLE_SIGNIN: false // ต้อง false เพื่อ "เปิด" Google Sign-In
