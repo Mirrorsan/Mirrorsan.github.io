@@ -156,6 +156,11 @@
     const addProjectBtn  = $('#add-project');
     const addLineButtons = document.querySelectorAll('.add-line[data-target]');
 
+    // NEW: refs for Support → Other (must come after form is available)
+    const otherCb     = form.querySelector('input[name="support_other"]');
+    const otherWrap   = document.getElementById('supp-other-wrap');
+    const otherTextEl = document.getElementById('supp-other-text');
+
     // 3) labels
     $('#lbl-key').textContent       = cfg.QUESTIONS.executiveSummary.keyHighlights;
     $('#lbl-upcoming').textContent  = cfg.QUESTIONS.executiveSummary.upcomingFocus;
@@ -184,6 +189,15 @@
     // แถวเริ่มต้น
     addDefaultLines(projectsList);
 
+    // Show/hide "Other" textarea
+    otherCb.addEventListener('change', () => {
+      const show = otherCb.checked;
+      otherWrap.style.display = show ? 'block' : 'none';
+      if (!show) otherTextEl.value = '';
+    });
+    // sync initial visibility (e.g., if browser restores state)
+    otherWrap.style.display = otherCb.checked ? 'block' : 'none';
+
     // 5) submit
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -194,6 +208,20 @@
 
       try {
         const data = new FormData(form);
+
+        // Build Support payload (with "Other" text)
+        const otherChecked = otherCb.checked;
+        const otherText    = (otherTextEl.value || '').trim();
+
+        // OPTIONAL validation: require text when "Other" is checked
+        if (otherChecked && !otherText) {
+          msg.textContent = '❌ Please specify what “Other” support you need.';
+          otherTextEl.focus();
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit';
+          return; // stop submit
+        }
+
         const payload = {
           firstName: (data.get('firstName') || '').trim(),
           lastName:  (data.get('lastName')  || '').trim(),
@@ -214,7 +242,9 @@
             training:            form.querySelector('input[name="support_training"]').checked,
             managerialSupport:   form.querySelector('input[name="support_managerialSupport"]').checked,
             collaboration:       form.querySelector('input[name="support_collaboration"]').checked,
-            other:               form.querySelector('input[name="support_other"]').checked
+            // NEW shape expected by backend _normalizeSupport
+            otherChecked,
+            otherText
           },
           recaptchaToken: await getRecaptchaToken()
         };
@@ -235,6 +265,10 @@
         projectsList.innerHTML = '';
         ['concerns','risks','issues'].forEach(id => (document.getElementById(id).innerHTML = ''));
         addDefaultLines(projectsList);
+
+        // reset "Other" UI
+        otherWrap.style.display = 'none';
+        otherTextEl.value = '';
       } catch (err) {
         console.error(err);
         msg.textContent = `❌ ${err.message || 'Failed to submit'}`;

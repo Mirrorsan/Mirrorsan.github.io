@@ -191,9 +191,13 @@
             <span id="lbl-support-collab">Cross-team collaboration</span>
           </label>
           <label class="cb">
-            <input type="checkbox" name="support_other">
+            <input type="checkbox" name="support_other" id="supp-other">
             <span id="lbl-support-other">Other</span>
           </label>
+          <div id="supp-other-wrap" style="display:none; margin:6px 0 0 28px;">
+            <label for="supp-other-text" class="small">Please specify</label>
+            <textarea id="supp-other-text" rows="3" placeholder="Describe the support you need..."></textarea>
+          </div>
         </fieldset>
 
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
