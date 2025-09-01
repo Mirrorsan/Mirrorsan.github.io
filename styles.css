@@ -88,6 +88,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ========== Navbar ========== */
+.site-nav{position:sticky;top:0;z-index:40;background:#ffffffcc;border-bottom:1px solid #e5e7eb;
+            backdrop-filter:saturate(140%) blur(2px)}
+  .site-nav .wrap{max-width:1100px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:16px}
+  .site-nav .brand{font-weight:700;color:#0f172a;text-decoration:none}
+  .site-nav .brand:hover{opacity:.9}
+  .site-nav .nav{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .site-nav .nav a{color:#334155;text-decoration:none;padding:6px 10px;border-radius:8px}
+  .site-nav .nav a:hover{background:#f1f5f9}
+  .site-nav .nav a.active{color:#0f172a;font-weight:600;background:#eef2ff}
+  .site-nav .divider{width:1px;height:18px;background:#e2e8f0;display:inline-block}
+
 /* ========== Layout ========== */
 .container {
   max-width: var(--maxw);

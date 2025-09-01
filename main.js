@@ -40,6 +40,11 @@
     return grecaptcha.execute(key, { action });
   }
 
+  (function(){
+    const p = location.pathname.toLowerCase();
+    const active = p.includes('admin') ? 'navAdmin' : 'navSubmit';
+    document.getElementById(active)?.classList.add('active');
+  })();
 
   /* -------------------- form status -------------------- */
   // เช็คสถานะฟอร์ม (ทน CORS/redirect + มี timeout)
