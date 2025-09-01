@@ -9,6 +9,38 @@
     try { return JSON.parse(text); } catch { return null; }
   }
 
+  function assertRecaptchaConfig() {
+    const key = window.APP_CONFIG && window.APP_CONFIG.RECAPTCHA_SITE_KEY;
+    if (!key) throw new Error('Missing RECAPTCHA_SITE_KEY in APP_CONFIG');
+    return key;
+  }
+
+  let __recaptchaLoadPromise;
+  function loadRecaptcha() {
+    const key = assertRecaptchaConfig();
+    if (window.grecaptcha) return Promise.resolve(window.grecaptcha);
+    if (__recaptchaLoadPromise) return __recaptchaLoadPromise;
+
+    const url = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(key);
+    __recaptchaLoadPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.async = true; s.defer = true;
+      s.onload = () => resolve(window.grecaptcha);
+      s.onerror = () => reject(new Error('Failed to load reCAPTCHA'));
+      document.head.appendChild(s);
+    });
+    return __recaptchaLoadPromise;
+  }
+
+  async function getRecaptchaToken(action = 'submit') {
+    const key = assertRecaptchaConfig();
+    await loadRecaptcha();
+    await new Promise(res => grecaptcha.ready(res));
+    return grecaptcha.execute(key, { action });
+  }
+
+
   /* -------------------- form status -------------------- */
   // เช็คสถานะฟอร์ม (ทน CORS/redirect + มี timeout)
   async function fetchFormStatus() {
@@ -79,29 +111,6 @@
     try { window.location.replace('formclose.html'); }
     catch { window.location.href = 'formclose.html'; }
     return false;
-  }
-
-  /* -------------------- reCAPTCHA -------------------- */
-  async function getRecaptchaToken() {
-    const key = cfg.RECAPTCHA_SITE_KEY;
-    if (!key) return '';
-    return new Promise(resolve => {
-      let tries = 0;
-      (function wait() {
-        tries++;
-        if (window.grecaptcha && grecaptcha.execute) {
-          grecaptcha.ready(() => {
-            grecaptcha.execute(key, { action: 'submit' })
-              .then(t => resolve(t))
-              .catch(() => resolve(''));
-          });
-        } else if (tries < 30) {
-          setTimeout(wait, 100);
-        } else {
-          resolve('');
-        }
-      })();
-    });
   }
 
   /* -------------------- UI helpers (textarea version) -------------------- */
@@ -221,7 +230,7 @@
           submitBtn.textContent = 'Submit';
           return; // stop submit
         }
-
+        const recaptchaToken = await getRecaptchaToken('submit');
         const payload = {
           firstName: (data.get('firstName') || '').trim(),
           lastName:  (data.get('lastName')  || '').trim(),
@@ -246,7 +255,7 @@
             otherChecked,
             otherText
           },
-          recaptchaToken: await getRecaptchaToken()
+          recaptchaToken
         };
 
         // ส่งแบบ simple request เลี่ยง preflight/CORS

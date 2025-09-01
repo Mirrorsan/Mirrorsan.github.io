@@ -27,7 +27,8 @@
           <span id="formStatusBadge" class="badge">—</span>
         </div>
 
-        <div class="grid grid-3">
+        <!-- CHANGED: grid-3 -> grid-4 -->
+        <div class="grid grid-4">
           <!-- Toggle force -->
           <div>
             <label class="lbl">Toggle เปิด/ปิด (Force)</label>
@@ -67,6 +68,39 @@
             <small class="small">Final = (อยู่ใน Manual Window <b>หรือ</b> อยู่ใน Schedule) และไม่ถูก Force ปิด</small>
           </div>
 
+          <!-- NEW: Schedule (Auto Window) -->
+          <div>
+            <label class="lbl">Schedule (Auto Window)</label>
+            <div class="row">
+              <select id="schedModeSel">
+                <option value="OFF">OFF</option>
+                <option value="START_MIDDLE">1 → 15 (ทุกเดือน)</option>
+                <option value="MIDDLE">16 → 15 (ข้ามเดือน)</option>
+                <option value="CUSTOM">CUSTOM (กำหนดวันเอง)</option>
+              </select>
+            </div>
+
+            <div id="schedCustomWrap" class="row mt" style="display:none; gap:8px;">
+              <div style="flex:1">
+                <label>Start day</label>
+                <input type="number" id="schedStartDay" min="1" max="31" placeholder="1–31"/>
+              </div>
+              <div style="flex:1">
+                <label>End day</label>
+                <input type="number" id="schedEndDay" min="1" max="31" placeholder="1–31"/>
+              </div>
+            </div>
+
+            <div class="row mt">
+              <button class="btn" id="btn-save-schedule">บันทึก Schedule</button>
+            </div>
+
+            <div class="mt small">
+              ตอนนี้: <span id="schedActiveBadge" class="badge">—</span>
+            </div>
+            <small class="small">CUSTOM รองรับช่วงข้ามเดือน เช่น 16 → 15 (เดือนถัดไป)</small>
+          </div>
+
           <!-- Quick month view -->
           <div>
             <label class="lbl">Month Quick View</label>
@@ -84,6 +118,7 @@
           </div>
         </div>
       </div>
+
 
       <!-- DASHBOARD -->
       <div class="card">
@@ -136,27 +171,6 @@
           </div>
         </div>
       </div>
-
-      <!-- ROLLOVER -->
-      <!-- <div class="card">
-        <div class="card-header"><h2>Rollover</h2></div>
-        <div class="grid grid-3">
-          <div><label>From</label><input type="month" id="fromMonth"/></div>
-          <div><label>To</label><input type="month" id="toMonth"/></div>
-          <div>
-            <label>Mode</label>
-            <select id="rollMode">
-              <option value="copy">Copy</option>
-              <option value="move">Move</option>
-            </select>
-          </div>
-        </div>
-        <div class="row mt">
-          <button class="btn secondary" id="btn-dryrun">Dry-run</button>
-          <button class="btn" id="btn-roll">Confirm Rollover</button>
-        </div>
-        <div id="rollMsg" class="small"></div>
-      </div> -->
 
       <footer class="footer">
         <span id="whoami" class="small muted"></span>
