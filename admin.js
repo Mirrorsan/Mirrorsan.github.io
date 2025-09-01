@@ -12,6 +12,12 @@
     el.style.color = isErr ? '#dc2626' : '#667085';
   }
 
+  // === NEW: helper คุมการมองเห็นหน้า Admin ===
+  const showAdmin = (on) => {
+    const el = $('#admin-ui');
+    if (el) el.style.display = on ? 'block' : 'none';
+  };
+
   // ---------- Loading overlay helpers ----------
   function busy(on, msg='Loading…') {
     const o = $('#loadingOverlay'); if (!o) return;
@@ -272,19 +278,28 @@
           callback: async (resp) => {
             try{
               idToken = resp.credential;
-              $('#admin-ui').style.display = 'block';
-              note('กำลังโหลดข้อมูล…');
+
+              note('กำลังตรวจสอบสิทธิ์…');
+              const auth = await api('authstatus', {});   // ← ตรวจสิทธิ์กับ GAS
+              if (!auth.isAdmin) {
+                idToken = null;
+                showAdmin(false);
+                note('ไม่ได้รับอนุญาตให้เข้าหน้า Admin', true);
+                return;
+              }
+
+              showAdmin(true);
+              note(`ลงชื่อเข้าใช้แล้ว${auth.email ? ': ' + auth.email : ''}`);
               await withBusy('Loading data…', refreshAll);
-              note('ลงชื่อเข้าใช้แล้ว');
             }catch(e){ note(e.message, true); }
           }
         });
         google.accounts.id.renderButton($('#signin'), { theme:'outline', size:'large', shape:'pill', width: 260 });
       } else if (++tries > 50) {
         clearInterval(timer);
-        $('#admin-ui').style.display = 'block';
-        note('โหลด Google Sign-In ไม่สำเร็จ → เปิดโหมดชั่วคราว (DEV)', true);
-        withBusy('Loading data…', refreshAll).catch(e => note(e.message, true));
+        // *** ไม่มี DEV fallback อัตโนมัติแล้ว ***
+        showAdmin(false);
+        note('โหลด Google Sign-In ไม่สำเร็จ', true);
       }
     }, 100);
   }
@@ -297,10 +312,11 @@
     syncCustomVisibility($('#schedModeSel')?.value || 'OFF');
 
     if (CONFIG.DISABLE_SIGNIN){
-      $('#admin-ui').style.display = 'block';
+      showAdmin(true);
       await withBusy('Loading data…', refreshAll);
       note('DEV MODE (Sign-In disabled)');
     } else {
+      showAdmin(false);
       initGIS();
     }
   });
