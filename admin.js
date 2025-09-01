@@ -65,7 +65,6 @@
     const on = (mode === 'CUSTOM');
     if (!wrap) return;
 
-    // support both inline style and optional .hidden class
     if (on) {
       wrap.classList?.remove('hidden');
       wrap.style.display = 'flex';
@@ -75,6 +74,71 @@
     }
     if (s) s.disabled = !on;
     if (e) e.disabled = !on;
+  }
+
+  // ---------- Dynamic schedule explanation ----------
+  function badge(ok){ return ok ? '<span class="badge open">ACTIVE</span>' : '<span class="badge closed">INACTIVE</span>'; }
+
+  function explainSchedule(mode, startDay, endDay, status){
+    const tz = status?.tz || 'local';
+    const sched = status?.schedule || {};
+    const win = (sched.enabled && sched.windowStart && sched.windowEnd)
+      ? `${sched.windowStart} → ${sched.windowEnd} (${tz})`
+      : 'OFF';
+
+    const lines = [];
+    switch (String(mode || 'OFF').toUpperCase()) {
+      case 'OFF':
+        lines.push('Schedule: OFF → จะอ้างอิง Manual Window เท่านั้น (ถ้ามี)');
+        break;
+
+      case 'START_MIDDLE':
+        lines.push('เปิดอัตโนมัติทุกเดือน: วันที่ 1 (00:00) → วันที่ 16 (00:00) ของเดือนเดียวกัน');
+        break;
+
+      case 'MIDDLE':
+        lines.push('เปิดอัตโนมัติแบบข้ามเดือน: วันที่ 16 ของเดือนนี้ (00:00) → วันที่ 16 ของเดือนถัดไป (00:00)');
+        lines.push('หมายเหตุ: ครอบคลุมวันที่ 16–สิ้นเดือนของเดือนนี้ และ 1–15 ของเดือนหน้า');
+        break;
+
+      case 'CUSTOM': {
+        const s = Number(startDay), e = Number(endDay);
+        if (!Number.isInteger(s) || !Number.isInteger(e)) {
+          lines.push('CUSTOM: กรุณากรอก Start/End day เป็นเลข 1–31');
+          break;
+        }
+        if (s < 1 || s > 31 || e < 1 || e > 31) {
+          lines.push('CUSTOM: Start/End day ต้องอยู่ในช่วง 1–31');
+          break;
+        }
+        if (s <= e) {
+          lines.push(`CUSTOM (ภายในเดือนเดียวกัน): วันที่ ${s} (00:00) → วันที่ ${e+1} (00:00) ของเดือนปัจจุบัน`);
+          lines.push('ตัวอย่าง: 2 → 2 = เปิดเฉพาะวันที่ 2 ทั้งวัน');
+        } else {
+          lines.push(`CUSTOM (ข้ามเดือน): วันที่ ${s} ของเดือนนี้ (00:00) → วันที่ ${e+1} ของเดือนถัดไป (00:00)`);
+          lines.push('ตัวอย่าง: 16 → 15 = เปิดตั้งแต่ 16 ของเดือนนี้ ถึง 15 ของเดือนหน้า');
+        }
+        lines.push('การเปรียบเทียบเวลา: รวมเวลาเริ่มต้น (>= start) แต่ไม่รวมหัววันถัดจากวันสิ้นสุด (< end)');
+        break;
+      }
+    }
+
+    if (mode !== 'OFF') {
+      lines.push(`รอบที่คำนวณตอนนี้: ${win} ${sched.enabled ? badge(!!sched.active) : ''}`);
+    }
+    return lines.map(l => `• ${l}`).join('<br/>');
+  }
+
+  function updateScheduleExplainFromUI(status){
+    const el = $('#schedExplain'); if (!el) return;
+    const mode = ($('#schedModeSel')?.value || 'OFF').toUpperCase();
+    const sdUI = $('#schedStartDay')?.value;
+    const edUI = $('#schedEndDay')?.value;
+
+    const sd = sdUI !== '' ? Number(sdUI) : (status?.schedule?.startDay ?? '');
+    const ed = edUI !== '' ? Number(edUI) : (status?.schedule?.endDay   ?? '');
+
+    el.innerHTML = explainSchedule(mode, sd, ed, status);
   }
 
   // Load status → fill UI
@@ -116,6 +180,9 @@
     // manual picker fill
     if (s.manualWindow?.start && fp.manualStart) fp.manualStart.setDate(s.manualWindow.start, true, 'Y-m-d');
     if (s.manualWindow?.end   && fp.manualEnd)   fp.manualEnd.setDate(s.manualWindow.end,   true, 'Y-m-d');
+
+    // NEW: คำอธิบายแบบไดนามิก
+    updateScheduleExplainFromUI(s);
   }
 
   async function loadDashboardMonth(){
@@ -273,7 +340,14 @@
       if (sEl) sEl.value = '';
       if (eEl) eEl.value = '';
     }
+
+    // update explanation live
+    updateScheduleExplainFromUI();
   });
+
+  // live explanation while typing days
+  $('#schedStartDay')?.addEventListener('input', () => updateScheduleExplainFromUI());
+  $('#schedEndDay')  ?.addEventListener('input',   () => updateScheduleExplainFromUI());
 
   $('#btn-save-schedule')?.addEventListener('click', async () => {
     const mode = $('#schedModeSel')?.value || 'OFF';
@@ -287,7 +361,7 @@
       } else {
         await api('setScheduleMode', { mode });
       }
-      await loadStatus();
+      await loadStatus();              // จะรีเฟรช + อธิบายใหม่ให้อัตโนมัติ
       note('บันทึก Schedule แล้ว');
     }catch(err){
       note(`บันทึก Schedule ไม่สำเร็จ: ${err.message}`, true);
