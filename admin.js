@@ -12,6 +12,25 @@
     el.style.color = isErr ? '#dc2626' : '#667085';
   }
 
+  // ---------- Loading overlay helpers ----------
+  function busy(on, msg='Loading…') {
+    const o = $('#loadingOverlay'); if (!o) return;
+    const l = $('#loadingLabel');
+    if (on) {
+      if (l) l.textContent = msg;
+      o.hidden = false;
+      document.body.setAttribute('aria-busy','true');
+    } else {
+      o.hidden = true;
+      document.body.removeAttribute('aria-busy');
+    }
+  }
+  async function withBusy(msg, fn) {
+    busy(true, msg);
+    try { return await fn(); }
+    finally { busy(false); }
+  }
+
   async function api(op, payload = {}) {
     if (!window.CONFIG || !CONFIG.API_URL) throw new Error('API_URL ยังไม่ถูกตั้งค่า');
     const body = { op, payload };
@@ -45,9 +64,10 @@
     });
   }
 
+  // Badge ด้านบน → FORM OPEN/CLOSED
   function setBadge(open){
     const el = $('#formStatusBadge'); if(!el) return;
-    el.textContent = open ? 'OPEN' : 'CLOSED';
+    el.textContent = open ? 'FORM OPEN' : 'FORM CLOSED';
     el.className = 'badge ' + (open ? 'open' : 'closed');
   }
   function setForceModeUI(mode){
@@ -77,8 +97,6 @@
   }
 
   // ---------- Dynamic schedule explanation ----------
-  function badge(ok){ return ok ? '<span class="badge open">ACTIVE</span>' : '<span class="badge closed">INACTIVE</span>'; }
-
   function explainSchedule(mode, startDay, endDay, status){
     const tz = status?.tz || 'local';
     const sched = status?.schedule || {};
@@ -124,7 +142,7 @@
     }
 
     if (mode !== 'OFF') {
-      lines.push(`รอบที่คำนวณตอนนี้: ${win} ${sched.enabled ? badge(!!sched.active) : ''}`);
+      lines.push(`รอบที่คำนวณตอนนี้: ${win}`);
     }
     return lines.map(l => `• ${l}`).join('<br/>');
   }
@@ -170,10 +188,11 @@
       if ($('#schedEndDay'))   $('#schedEndDay').value   = '';
     }
 
+    // Badge ตรง schedule → SCHEDULE ACTIVE/INACTIVE
     const activeBadge = $('#schedActiveBadge');
     if (activeBadge) {
       const active = !!s.schedule?.active;
-      activeBadge.textContent = active ? 'ACTIVE' : 'INACTIVE';
+      activeBadge.textContent = active ? 'SCHEDULE ACTIVE' : 'SCHEDULE INACTIVE';
       activeBadge.className = 'badge ' + (active ? 'open' : 'closed');
     }
 
@@ -181,7 +200,7 @@
     if (s.manualWindow?.start && fp.manualStart) fp.manualStart.setDate(s.manualWindow.start, true, 'Y-m-d');
     if (s.manualWindow?.end   && fp.manualEnd)   fp.manualEnd.setDate(s.manualWindow.end,   true, 'Y-m-d');
 
-    // NEW: คำอธิบายแบบไดนามิก
+    // คำอธิบายแบบไดนามิก
     updateScheduleExplainFromUI(s);
   }
 
@@ -255,7 +274,7 @@
               idToken = resp.credential;
               $('#admin-ui').style.display = 'block';
               note('กำลังโหลดข้อมูล…');
-              await refreshAll();
+              await withBusy('Loading data…', refreshAll);
               note('ลงชื่อเข้าใช้แล้ว');
             }catch(e){ note(e.message, true); }
           }
@@ -265,7 +284,7 @@
         clearInterval(timer);
         $('#admin-ui').style.display = 'block';
         note('โหลด Google Sign-In ไม่สำเร็จ → เปิดโหมดชั่วคราว (DEV)', true);
-        refreshAll().catch(e => note(e.message, true));
+        withBusy('Loading data…', refreshAll).catch(e => note(e.message, true));
       }
     }, 100);
   }
@@ -279,7 +298,7 @@
 
     if (CONFIG.DISABLE_SIGNIN){
       $('#admin-ui').style.display = 'block';
-      refreshAll().catch(e=>note(e.message,true));
+      await withBusy('Loading data…', refreshAll);
       note('DEV MODE (Sign-In disabled)');
     } else {
       initGIS();
@@ -287,14 +306,16 @@
   });
 
   // Events
-  $('#btn-refresh')?.addEventListener('click', refreshAll);
+  $('#btn-refresh')?.addEventListener('click', () => withBusy('Refreshing…', refreshAll));
 
   $('#toggleForce')?.addEventListener('change', async (e) => {
     const checked = e.target.checked;
     try{
       const mode = checked ? 'FORCE_OPEN' : 'FORCE_CLOSED';
-      await api('setFormMode', { mode });
-      await loadStatus();
+      await withBusy('Saving…', async ()=>{
+        await api('setFormMode', { mode });
+        await loadStatus();
+      });
       note(`ตั้งค่า ${mode} แล้ว`);
     }catch(err){
       e.target.checked = !checked;
@@ -304,9 +325,10 @@
 
   $('#btn-reset-auto')?.addEventListener('click', async () => {
     try{
-      note('กำลังตั้งค่าเป็น AUTO…');
-      await api('setFormMode', { mode: 'AUTO' });
-      await loadStatus();
+      await withBusy('Saving…', async ()=>{
+        await api('setFormMode', { mode: 'AUTO' });
+        await loadStatus();
+      });
       note('ตั้งค่าเป็น AUTO แล้ว');
     }catch(e){ note(`ตั้งค่าไม่สำเร็จ: ${e.message}`, true); }
   });
@@ -315,15 +337,19 @@
     const start = $('#manualStart')?.value || null;
     const end   = $('#manualEnd')?.value || null;
     if(!start && !end){ alert('กรุณาเลือกอย่างน้อย 1 ช่อง'); return; }
-    await api('setManualWindow', { startDate:start, endDate:end });
-    await loadStatus();
+    await withBusy('Saving window…', async ()=>{
+      await api('setManualWindow', { startDate:start, endDate:end });
+      await loadStatus();
+    });
   });
 
   $('#btn-clear-manual-window')?.addEventListener('click', async () => {
-    await api('setManualWindow', { startDate:null, endDate:null });
-    if (fp.manualStart) fp.manualStart.clear();
-    if (fp.manualEnd)   fp.manualEnd.clear();
-    await loadStatus();
+    await withBusy('Clearing window…', async ()=>{
+      await api('setManualWindow', { startDate:null, endDate:null });
+      if (fp.manualStart) fp.manualStart.clear();
+      if (fp.manualEnd)   fp.manualEnd.clear();
+      await loadStatus();
+    });
   });
 
   // Schedule mode UI
@@ -331,7 +357,7 @@
     const mode = e.target.value;
     syncCustomVisibility(mode);
 
-    // convenience: set defaults when switching to CUSTOM first time
+    // defaults when switching to CUSTOM
     const sEl = $('#schedStartDay'), eEl = $('#schedEndDay');
     if (mode === 'CUSTOM') {
       if (sEl && !sEl.value) sEl.value = '16';
@@ -340,47 +366,47 @@
       if (sEl) sEl.value = '';
       if (eEl) eEl.value = '';
     }
-
-    // update explanation live
     updateScheduleExplainFromUI();
   });
 
-  // live explanation while typing days
+  // live explanation while typing
   $('#schedStartDay')?.addEventListener('input', () => updateScheduleExplainFromUI());
   $('#schedEndDay')  ?.addEventListener('input',   () => updateScheduleExplainFromUI());
 
   $('#btn-save-schedule')?.addEventListener('click', async () => {
     const mode = $('#schedModeSel')?.value || 'OFF';
     try{
-      if (mode === 'CUSTOM') {
-        const s = Number($('#schedStartDay')?.value || '');
-        const e = Number($('#schedEndDay')?.value || '');
-        if (!Number.isInteger(s) || !Number.isInteger(e)) { alert('กรุณากรอก Start/End day เป็นตัวเลข 1–31'); return; }
-        if (s < 1 || s > 31 || e < 1 || e > 31) { alert('Start/End day ต้องอยู่ในช่วง 1–31'); return; }
-        await api('setScheduleMode', { mode, startDay: s, endDay: e });
-      } else {
-        await api('setScheduleMode', { mode });
-      }
-      await loadStatus();              // จะรีเฟรช + อธิบายใหม่ให้อัตโนมัติ
+      await withBusy('Saving schedule…', async ()=>{
+        if (mode === 'CUSTOM') {
+          const s = Number($('#schedStartDay')?.value || '');
+          const e = Number($('#schedEndDay')?.value || '');
+          if (!Number.isInteger(s) || !Number.isInteger(e)) { alert('กรุณากรอก Start/End day เป็นตัวเลข 1–31'); return; }
+          if (s < 1 || s > 31 || e < 1 || e > 31) { alert('Start/End day ต้องอยู่ในช่วง 1–31'); return; }
+          await api('setScheduleMode', { mode, startDay: s, endDay: e });
+        } else {
+          await api('setScheduleMode', { mode });
+        }
+        await loadStatus();
+      });
       note('บันทึก Schedule แล้ว');
     }catch(err){
       note(`บันทึก Schedule ไม่สำเร็จ: ${err.message}`, true);
     }
   });
 
-  $('#btn-range-stats')?.addEventListener('click', loadDashboardRange);
+  $('#btn-range-stats')?.addEventListener('click', () => withBusy('Calculating…', loadDashboardRange));
 
   $('#btn-export-specific')?.addEventListener('click', async () => {
     const month = $('#exportMonth')?.value || fmtMonth();
     try{
-      const r = await api('exportXlsxIfExists', { month });
+      const r = await withBusy('Exporting…', () => api('exportXlsxIfExists', { month }));
       $('#exportMsg').innerHTML = `Exported: <a href="${r.downloadUrl}" target="_blank" rel="noopener">Download .xlsx</a>`;
     }catch(e){ $('#exportMsg').textContent = `ไม่สามารถ Export เดือน ${month}: ${e.message}`; }
   });
 
   $('#btn-export-current')?.addEventListener('click', async () => {
     try{
-      const r = await api('exportXlsxCurrent', {});
+      const r = await withBusy('Exporting…', () => api('exportXlsxCurrent', {}));
       window.open(r.downloadUrl, '_blank');
     }catch(e){ alert(e.message); }
   });
@@ -390,7 +416,7 @@
     const to   = $('#exportTo')?.value;
     if(!from || !to){ alert('กรุณาเลือกช่วงวันที่ให้ครบ'); return; }
     try{
-      const r = await api('exportXlsxByRange', { from, to });
+      const r = await withBusy('Exporting…', () => api('exportXlsxByRange', { from, to }));
       $('#exportMsgRange').innerHTML = `Exported: <a href="${r.downloadUrl}" target="_blank" rel="noopener">Download .xlsx</a>`;
     }catch(e){ $('#exportMsgRange').textContent = `Export ไม่สำเร็จ: ${e.message}`; }
   });
