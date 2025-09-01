@@ -58,11 +58,23 @@
     else { t.indeterminate=true; l.textContent='AUTO'; }
   }
 
-  // NEW: toggle custom fields visibility
+  // ---- CUSTOM schedule UI toggle (show/hide + enable/disable) ----
   function syncCustomVisibility(mode) {
     const wrap = $('#schedCustomWrap');
+    const s = $('#schedStartDay'), e = $('#schedEndDay');
+    const on = (mode === 'CUSTOM');
     if (!wrap) return;
-    wrap.style.display = (mode === 'CUSTOM') ? 'flex' : 'none';
+
+    // support both inline style and optional .hidden class
+    if (on) {
+      wrap.classList?.remove('hidden');
+      wrap.style.display = 'flex';
+    } else {
+      wrap.classList?.add('hidden');
+      wrap.style.display = 'none';
+    }
+    if (s) s.disabled = !on;
+    if (e) e.disabled = !on;
   }
 
   // Load status → fill UI
@@ -79,7 +91,7 @@
     $('#modeView')         && ($('#modeView').textContent = s.mode || 'AUTO');
     $('#tzView')           && ($('#tzView').textContent   = s.tz || '—');
 
-    // NEW: schedule controls
+    // schedule controls
     const modeSel = $('#schedModeSel');
     if (modeSel) {
       const mode = s.schedule?.mode || 'OFF';
@@ -93,6 +105,7 @@
       if ($('#schedStartDay')) $('#schedStartDay').value = '';
       if ($('#schedEndDay'))   $('#schedEndDay').value   = '';
     }
+
     const activeBadge = $('#schedActiveBadge');
     if (activeBadge) {
       const active = !!s.schedule?.active;
@@ -194,6 +207,9 @@
     const ok = await waitForConfig(4000);
     if (!ok) { note('ไม่พบ config.js หรือโหลดไม่สำเร็จ', true); return; }
 
+    // make sure CUSTOM block is in correct state even before status loads
+    syncCustomVisibility($('#schedModeSel')?.value || 'OFF');
+
     if (CONFIG.DISABLE_SIGNIN){
       $('#admin-ui').style.display = 'block';
       refreshAll().catch(e=>note(e.message,true));
@@ -243,9 +259,20 @@
     await loadStatus();
   });
 
-  // NEW: schedule mode UI
+  // Schedule mode UI
   $('#schedModeSel')?.addEventListener('change', (e) => {
-    syncCustomVisibility(e.target.value);
+    const mode = e.target.value;
+    syncCustomVisibility(mode);
+
+    // convenience: set defaults when switching to CUSTOM first time
+    const sEl = $('#schedStartDay'), eEl = $('#schedEndDay');
+    if (mode === 'CUSTOM') {
+      if (sEl && !sEl.value) sEl.value = '16';
+      if (eEl && !eEl.value) eEl.value = '15';
+    } else {
+      if (sEl) sEl.value = '';
+      if (eEl) eEl.value = '';
+    }
   });
 
   $('#btn-save-schedule')?.addEventListener('click', async () => {

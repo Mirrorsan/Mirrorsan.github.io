@@ -39,3 +39,4 @@ input:checked + .slider{background:#86efac}input:checked + .slider:before{transf
 .flatpickr-day.today{border-color:var(--accent)}
 .flatpickr-day.selected{background:var(--accent);color:#fff}
 .flatpickr-day:hover{background:#eef2ff}
+.hidden { display: none; }
