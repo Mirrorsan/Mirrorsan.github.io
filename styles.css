@@ -287,16 +287,14 @@ footer {
   position: relative;
   display: inline-block;
   padding-right: 8px;
-  background:
-    linear-gradient(180deg, transparent 60%, #eef2ff 60%); /* ไฮไลท์ใต้ตัวอักษร */
+  /* background: linear-gradient(180deg, transparent 60%, #eef2ff 60%); ไฮไลท์ใต้ตัวอักษร */
 }
 
 /* --- เส้นคั่น <hr> ให้เป็น divider สวย ๆ (ยังคง <br><hr><br> เดิม) --- */
 .card hr {
   border: 0;
   height: 1px;
-  background:
-    linear-gradient(to right, rgba(0,0,0,0), #e3e6ef 18%, #e3e6ef 82%, rgba(0,0,0,0));
+  background: linear-gradient(to right, rgba(0,0,0,0), #e3e6ef 18%, #e3e6ef 82%, rgba(0,0,0,0));
   margin: 28px -18px;               /* ยืดเต็มขอบการ์ด */
   position: relative;
 }
